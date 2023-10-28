@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block header %}
+{% block title %}Savings{% endblock %}
+{% endblock %}
+
+
+{% macro render_modal(saving) -%}
+<div class="modal fade" id="updateSaving{{saving[0]}}" tabindex="-1" role="dialog" aria-labelledby="updateSavingLabel"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="updateSavingLabel">Update Saving</h5>
+        <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <form method="post" action="{{ url_for('finances.saving.update', id=saving[0]) }}">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Name</label>
+            <input class="form-control form-control-user" name="name" value="{{ request.form['name'] or saving[1] }}" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Balance</label>
+            <input class="form-control form-control-user" type="number" name="balance" value="{{ request.form['balance'] or saving[2] }}">
+          </div>
+          <div class="form-group">
+            <label>Monthly Saving</label>
+            <input class="form-control form-control-user" type="number" name="monthly_saving" value="{{ request.form['monthly_saving'] or saving[3] }}" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Goal</label>
+            <input class="form-control form-control-user" type="number" name="goal" value="{{ request.form['goal'] or saving[4] }}" autocomplete="off">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" type="submit">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{%- endmacro%}
+
+{% block content %}
+<div class="mb-4">
+    <a href="#" class="btn btn-primary btn-icon-split" data-toggle="modal" data-target="#createSaving">
+      <span class="icon text-white-50">
+          <i class="fas fa-plus"></i>
+      </span>
+      <span class="text">New saving</span>
+  </a>
+</div>
+
+<div class="modal fade" id="createSaving" tabindex="-1" role="dialog" aria-labelledby="createSavingLabel"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createSavingLabel">Create New Saving</h5>
+        <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <form method="post" action="{{ url_for('finances.saving.create') }}">
+        <div class="modal-body">
+          <div class="form-group">
+            <input class="form-control form-control-user" name="name" placeholder="Name" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <input class="form-control form-control-user" type="number" name="balance" placeholder="Balance" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <input class="form-control form-control-user" type="number" name="monthly_saving" placeholder="Monthly saving" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <input class="form-control form-control-user" type="number" name="goal" placeholder="Goal" autocomplete="off">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" type="submit">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+{% for saving in savings %}
+<div class="col-xl-3 col-md-6 mb-4" data-toggle="modal" data-target="#updateSaving{{saving[0]}}">
+  <div class="card border-left-info shadow h-100 py-2">
+    <div class="card-body">
+      <div class="row no-gutters align-items-center">
+        <div class="col mr-2">
+          <div class="text-xs font-weight-bold text-info text-uppercase mb-1">{{ saving[1] }}</div>
+          <div class="row no-gutters align-items-center">
+            <div class="col-auto">
+              <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ saving[2] }}</div>
+            </div>
+            {% if saving[4] %}
+            <div class="col">
+              <div class="progress progress-sm mr-2">
+                <div class="progress-bar bg-info" role="progressbar" style="width: {{saving[2]*100/saving[4]}}%"
+                  aria-valuenow="{{saving[2]*100/saving[4]}}" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{ render_modal(saving) }}
+{% endfor %}
+</div>
+{% endblock %}

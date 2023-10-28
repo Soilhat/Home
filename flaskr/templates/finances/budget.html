@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% from "components/table.html" import render_table with context %}
+
+{% block header %}
+{% block title %}Budget{% endblock %}
+{% endblock %}
+
+{% macro need_real_higher_than_budget(cell, row) -%}
+    {% if cell <= row["budget"]%}
+        {{cell}}
+    {% else %}
+        <div class="text-danger">{{cell}}</div>
+    {% endif %}
+{%- endmacro%}
+
+{% block content %}
+
+<div class="mb-4">
+    <a href="#" class="btn btn-primary btn-icon-split" data-toggle="modal" data-target="#createBudget">
+      <span class="icon text-white-50">
+          <i class="fas fa-plus"></i>
+      </span>
+      <span class="text">New budget</span>
+  </a>
+</div>
+
+<div class="modal fade" id="createBudget" tabindex="-1" role="dialog" aria-labelledby="createBudgetLabel"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createBudgetLabel">Create New Budget</h5>
+        <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <form action="{{ url_for('finances.budget.create') }}" method="post">
+        <div class="modal-body">
+          <div class="form-group">
+            <input class="form-control form-control-user" name="label" placeholder="Label" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <input class="form-control form-control-user" type="number" name="amount" placeholder="Amount" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <input class="form-control form-control-user" list="budget-type" name="type" placeholder="Type" required autocomplete="off">
+            <datalist id="budget-type">
+                {% for type in budget_type %}
+                <option value="{{type[0]}}"></option>
+                {% endfor %}
+            </datalist>
+          </div>
+          <div class="form-group">
+            <input class="form-control form-control-user" type="date" name="start" placeholder="Start" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <input class="form-control form-control-user" type="date" name="end" placeholder="End" autocomplete="off">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" type="submit">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<h2 class="h4">
+    <input type="month" value="{{month}}" class="form-control bg-light border-0" style="font-size: inherit;width: inherit;" onchange="changeMonth()" id="monthPicker">
+</h2>
+
+<div class="row">
+<div class="col-xl-6">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Revenus</h6>
+        </div>
+        {{render_table(revenus, [{"name" :"Label"}, {"name" :"Date"}, {"name" :"Real"}, {"name" :"Budget"}])}}
+    </div>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Budget Summary</h6>
+        </div>
+        {{render_table(summary, [{"name" :"Type"}, {"name" :"%"}, {"name" :"Budget"}, {"name" :"Real"}])}}
+    </div>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Variables</h6>
+        </div>
+        {{render_table(variables, [{"name" :"Label"}, {"name" :"Budget"}, {"name" :"Real"}, {"name" :"Type"}])}}
+    </div>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Loans</h6>
+        </div>
+        {{render_table(loans, [{"name" :"Label"}, {"name" :"Date"}, {"name" :"Amount"}, {"name" :"Budget"}])}}
+    </div>
+</div>
+
+<div class="col-xl-6">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Expenses</h6>
+        </div>
+        {{render_table(
+            expenses,
+            [
+                {"name":"id", "type":"hide"},
+                {"name" :"Label"},
+                {"name" :"Date"},
+                {"name" :"Amount"},
+                {
+                    "name" :"Budget",
+                    "type": "select",
+                    "options": spendings,
+                    "onchange":"'update_budget($id)'",
+                    "index":"id"
+                }
+            ]
+        )}}
+    </div>
+</div>
+</div>
+<script>
+  function changeMonth() {
+    var input = document.getElementById('monthPicker');
+    var url = new URL(window.location.toString())
+    var search_params = url.searchParams;
+    search_params.set('month', input.value);
+
+    // change the search property of the main url
+    url.search = search_params.toString();
+
+    // the new url string
+    window.location = url.toString()
+  }
+  function update_budget(index) {
+    var e = document.getElementById(index);
+    console.log(e.options[e.selectedIndex].text)
+    value = e.options[e.selectedIndex].text
+    header = {
+        'Content-type':'application/json', 
+        'Accept':'application/json'
+    }
+    fetch("/transac/"+index, {
+      method: "POST",
+      headers:header,
+      body: JSON.stringify(value)
+    })
+  }
+</script>
+{% endblock %}
