@@ -8,6 +8,16 @@ from flaskr.db import get_db
 
 bp = Blueprint('budget', __name__)
 
+internal_trac = [
+    'MME SOILHAT MOHAMED',
+    'VIREMENT EN VOTRE FAVEUR DE MONTEIRO ARTHUR',
+    'MONTEIRO ARTHUR',
+    'MOHAMED SOILHAT',
+    'VIE COMMUNE',
+    '00003310727 ECHEANCE',
+    'EPARGNE',
+    'FACTURES'
+]
 
 @bp.route('/budget')
 @login_required
@@ -49,12 +59,6 @@ def get_budgeted_income(curr, month):
     return curr.fetchone()[0]
 
 def get_revenus(curr, month):
-    internal_trac = [
-        'MME SOILHAT MOHAMED',
-        'VIREMENT EN VOTRE FAVEUR DE MONTEIRO ARTHUR',
-        'MONTEIRO ARTHUR',
-        'MOHAMED SOILHAT',
-    ]
     revenus = f"""
         SELECT label, MAX(date) as date, to_currency(sum(amount)) as 'real_amount', MAX(budget) as budget
         FROM (
@@ -64,7 +68,7 @@ def get_revenus(curr, month):
             LEFT OUTER JOIN budget on Upper(trac.label) LIKE CONCAT('%',  Upper(budget.label), '%')
             WHERE acc.type = 'CHECKING' AND trac.amount > 0 AND date_format(Date,'%Y-%m') = '{month}'
 		        AND (budget.type = 'Income' OR budget.type IS NULL)
-                AND trac.label NOT IN ('{"','".join(internal_trac)}')
+                AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
         UNION ALL
             SELECT DISTINCT budget.label, '' as date, to_currency(0) as 'real', to_currency(budget.amount) as budget, CASE WHEN budget.label IS NULL THEN trac.label else budget.label END as budget_label
             FROM budget
@@ -88,26 +92,27 @@ def get_revenus(curr, month):
 
 def get_summary(curr, month):
     query = f"""
-        SELECT type, to_prct(abs(max(budget))*100/{get_budgeted_income(curr, month)}) as '%', to_currency(max(budget))  as budget, to_currency(abs(sum(real_amount))) as 'real_amount'
+        SELECT type, to_prct(abs(sum(budget))*100/{get_budgeted_income(curr, month)}) as '%', to_currency(sum(budget))  as budget, to_currency(abs(sum(real_amount))) as 'real_amount'
         FROM (
-            SELECT type, to_currency(sum(amount)) as 'real_amount', max(budget)  as budget
+            SELECT type, to_currency(sum(amount)) as 'real_amount', sum(budget)  as budget
             FROM (
-                SELECT trac.label, budget.type, trac.amount, budget.amount as budget
+                SELECT budget.type, trac.amount, 0 as budget
                 FROM transaction as trac
                 INNER JOIN account as acc on trac.account=acc.id
                 LEFT OUTER JOIN budget on budget.label = trac.budget AND date_format(Date,'%Y-%m') = '{month}'
                 WHERE date_format(Date,'%Y-%m') = '{month}'
                     AND (budget.type <> 'Income' OR budget.type IS NULL)
+                    AND trac.amount < 0
+                    AND trac.Type <> 'TYPE_LOAN_PAYMENT'
+                    AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
             UNION ALL
-                SELECT DISTINCT budget.label, budget.type, 0 as 'real_amount', budget.amount as budget
+                SELECT budget.type, 0 as 'real_amount', budget.amount as budget
                 FROM budget
-                LEFT JOIN transaction as trac on budget.label = trac.budget AND date_format(Date,'%Y-%m') = '{month}'
-                WHERE (trac.id IS NULL OR date_format(Date,'%Y-%m') <> '{month}')
-                    AND ( start IS NULL OR (YEAR(start) <= {int(month[0:4])} AND MONTH(start) <={int(month[6:7])}))
+                WHERE ( start IS NULL OR (YEAR(start) <= {int(month[0:4])} AND MONTH(start) <={int(month[6:7])}))
                     AND ( end IS NULL OR (YEAR(end) >= {int(month[0:4])} AND MONTH(end) <={int(month[6:7])}))
-                    AND (budget.type <> 'Income' OR budget.type IS NULL)
+                    AND (type <> 'Income' OR type IS NULL)
             )labels
-            GROUP BY label, type
+            GROUP BY type
         )type_table
         GROUP BY type
     """
@@ -122,13 +127,10 @@ def get_summary(curr, month):
     return curr.fetchall()
 
 def get_expenses(curr, month):
-    internal_trac = [
-        'VIE COMMUNE',
-    ]
     query = f"""
         SELECT TRIM(LEADING '0' FROM trac.id) as id, trac.label, trac.date, to_currency(abs(trac.amount)) as amount, IFNULL(budget,'') as budget
 	    FROM transaction as trac
-        WHERE trac.amount < 0 AND date_format(Date,'%Y-%m') = '{month}' AND Type <> 'TYPE_LOAN_PAYMENT' AND trac.label NOT IN ('{"','".join(internal_trac)}')
+        WHERE trac.amount < 0 AND date_format(Date,'%Y-%m') = '{month}' AND Type <> 'TYPE_LOAN_PAYMENT' AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
     """
     curr.execute(f"""
             {query}
@@ -137,6 +139,7 @@ def get_expenses(curr, month):
             FROM (
                 {query}
             )s
+        ORDER BY date DESC
     """)
     return curr.fetchall()
 

@@ -5,13 +5,23 @@ from flaskr.db import get_db
 
 bp = Blueprint("dashboard", __name__)
 
+internal_trac = [
+    'MME SOILHAT MOHAMED',
+    'VIREMENT EN VOTRE FAVEUR DE MONTEIRO ARTHUR',
+    'MONTEIRO ARTHUR',
+    'MOHAMED SOILHAT',
+    'VIE COMMUNE',
+    '00003310727 ECHEANCE',
+    'EPARGNE',
+    'FACTURES'
+]
 
 @bp.route("/")
 @login_required
 def index():
     curr = get_db()[0]
     curr.execute(
-        """
+    """
         SELECT sum(balance)
         FROM account LEFT Join loan on account.id=loan.id
         WHERE loan.id IS NULL
@@ -29,13 +39,14 @@ def index():
     )
     loans = curr.fetchone()[0]
     curr.execute(
-        """select 
+        f"""select 
                 date_format(date,'%M %Y') as Date,
                 sum(CASE WHEN amount<0 THEN ABS(amount) END) as expenses,
                 sum(CASE WHEN amount>0 THEN amount END) as earnings
             from transaction
             LEFT Join loan on transaction.account=loan.id
-                    WHERE loan.id IS NULL
+            WHERE loan.id IS NULL
+                AND label NOT REGEXP '{"|".join(internal_trac)}'
             group by year(date),month(date)
             order by year(date),month(date);
         """

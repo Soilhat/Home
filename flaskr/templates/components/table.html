@@ -108,9 +108,6 @@
       // the new url string
       window.location = url.toString()
     }
-    function get_index(row, columns, index){
-      return row[columns.findIndex(({ name }) => nane === columns[index].index)]
-    }
     function trigger_function(func_str, row, columns){
       for (let index = 0; index < columns.length; index++) {
         func_str=func_str.replace(`$${columns[index].name}`,row[index].toString());
