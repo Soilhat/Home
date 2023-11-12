@@ -1,5 +1,6 @@
 from flask import current_app, g
 import mysql.connector
+from woob.capabilities.base import NotLoadedType, NotAvailableType
 
 
 def get_db():
@@ -22,3 +23,22 @@ def close_db():
         if conn.is_connected():
             db.close()
             conn.close()
+
+def executemany(query, records):
+    try:
+        records = [
+            tuple(
+                [
+                    element if (not isinstance(element, NotLoadedType)) and (not isinstance(element, NotAvailableType) )else None
+                    for element in record
+                ]
+            )
+            for record in records
+        ]
+        cursor, connection = get_db()
+        cursor.executemany(query, records)
+        connection.commit()
+        print(cursor.rowcount, "Record inserted or updated successfully")
+
+    except mysql.connector.Error as error:
+        print(f"Failed to insert record into MySQL table {error}")
