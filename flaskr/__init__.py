@@ -2,7 +2,7 @@ import os
 
 from flask import Flask
 
-from . import auth, finances, db
+from . import auth, finances
 
 def create_app(test_config=None):
     # create and configure the app
@@ -28,7 +28,4 @@ def create_app(test_config=None):
     app.register_blueprint(finances.bp)
     app.add_url_rule('/', endpoint='index')
 
-    """@app.after_request
-    def after_request_func(response):
-        db.close_db()"""
     return app

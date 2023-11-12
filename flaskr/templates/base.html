@@ -113,6 +113,7 @@
 							<!-- Dropdown - User Information -->
 							<div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
 								aria-labelledby="userDropdown">
+								<a class="dropdown-item" id="refreshData"  href="#">Refresh Accounts</a>
 								<div class="dropdown-divider"></div>
 								<a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
 									<i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
@@ -188,6 +189,20 @@
 	<!-- Custom scripts for all pages-->
 	<script src="static/js/sb-admin-2.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+	<script type=text/javascript>
+		$(function() {
+			$('a#refreshData').on('click', function(e) {
+				e.preventDefault()
+				$.getJSON('/accounts/refresh',
+					function(data) {
+				//do nothing
+				});
+				return false;
+			});
+		});
+	</script>
 	{% block javascript %}{% endblock %}
 </body>
 
