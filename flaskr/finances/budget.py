@@ -36,6 +36,7 @@ def index():
         revenus = get_revenus(curr, month),
         summary = get_summary(curr, month),
         variables = get_variables(curr, month),
+        fixed = get_fixed(curr, month),
         expenses = get_expenses(curr, month),
         loans= get_loans(curr, month),
         spendings= get_spendings(curr),
@@ -96,10 +97,11 @@ def get_summary(curr, month):
         FROM (
             SELECT type, to_currency(sum(amount)) as 'real_amount', sum(budget)  as budget
             FROM (
-                SELECT budget.type, trac.amount, 0 as budget
+                SELECT IFNULL(budget.type, fixed_bud.type) as type, trac.amount, 0 as budget
                 FROM transaction as trac
                 INNER JOIN account as acc on trac.account=acc.id
                 LEFT OUTER JOIN budget on budget.label = trac.budget AND date_format(Date,'%Y-%m') = '{month}'
+                LEFT OUTER JOIN budget as fixed_bud on trac.label LIKE CONCAT('%',fixed_bud.label,'%') AND date_format(Date,'%Y-%m') = '{month}'
                 WHERE date_format(Date,'%Y-%m') = '{month}'
                     AND (budget.type <> 'Income' OR budget.type IS NULL)
                     AND trac.amount < 0
@@ -130,7 +132,13 @@ def get_expenses(curr, month):
     query = f"""
         SELECT TRIM(LEADING '0' FROM trac.id) as id, trac.label, trac.date, to_currency(abs(trac.amount)) as amount, IFNULL(budget,'') as budget
 	    FROM transaction as trac
-        WHERE trac.amount < 0 AND date_format(Date,'%Y-%m') = '{month}' AND Type <> 'TYPE_LOAN_PAYMENT' AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
+        LEFT OUTER JOIN budget on trac.label LIKE CONCAT('%', budget.label ,'%')
+        WHERE 
+            trac.amount < 0
+            AND date_format(Date,'%Y-%m') = '{month}'
+            AND trac.Type <> 'TYPE_LOAN_PAYMENT'
+            AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
+            AND budget.label IS NULL
     """
     curr.execute(f"""
             {query}
@@ -151,6 +159,7 @@ def get_variables(curr, month):
         LEFT JOIN transaction as trac on budget.label = trac.budget AND date_format(Date,'%Y-%m') = date_format('{month}','%Y-%m')
         WHERE  ( start IS NULL OR start < '{month}')
             AND ( end IS NULL OR end > '{month}')
+            AND budget.fixed = 0
             AND (budget.type <> 'Income' OR budget.type IS NULL)
         GROUP BY budget.label, budget.type
     """
@@ -163,6 +172,30 @@ def get_variables(curr, month):
             )s
     """)
     return curr.fetchall()
+
+def get_fixed(curr, month):
+    """Retrieve Fixed monthly budgeted transactions"""
+    month = f"{month}-01"
+    query = f"""
+        SELECT budget.label, IFNULL(trac.Date,'') as date, to_currency(budget.amount) as budget, to_currency(abs(sum(trac.amount))) as 'real_amount', budget.type
+        FROM budget
+        LEFT JOIN transaction as trac on trac.label LIKE CONCAT('%', budget.label ,'%') AND date_format(Date,'%Y-%m') = date_format('{month}','%Y-%m')
+        WHERE  ( start IS NULL OR start < '{month}')
+            AND ( end IS NULL OR end > '{month}')
+            AND budget.fixed = 1
+            AND (budget.type <> 'Income' OR budget.type IS NULL)
+        GROUP BY budget.label, budget.type
+    """
+    curr.execute(f"""
+            {query}
+        UNION ALL
+            select 'Total' label, '' as Date, to_currency(abs(sum(budget))) as budget, to_currency(abs(sum(real_amount))) as 'real_amount', '' as type
+            FROM (
+                {query}
+            )s
+    """)
+    return curr.fetchall()
+
 
 def get_loans(curr, month):
     query = f"""
@@ -185,7 +218,7 @@ def get_spendings(curr):
         (
             SELECT budget.label
             FROM budget
-            WHERE budget.type <> 'Income'
+            WHERE budget.type <> 'Income' AND budget.fixed = 0
         )
         UNION ALL
         (
@@ -204,6 +237,7 @@ def create():
     budget_type = request.form['type']
     start = request.form['start'] if request.form['start'] != '' else None
     end = request.form['end'] if request.form['end'] != '' else None
+    fixed = True if request.form['fixed'] == 'on' else False
     error = None
 
     if not label:
@@ -214,9 +248,9 @@ def create():
     else:
         curr, conn = get_db()
         curr.execute(
-            'INSERT INTO budget (label, amount, type, start, end)'
-            ' VALUES (%s, %s, %s, %s, %s)',
-            (label, amount, budget_type, start, end)
+            'INSERT INTO budget (label, amount, type, start, end, fixed)'
+            ' VALUES (%s, %s, %s, %s, %s, %s)',
+            (label, amount, budget_type, start, end, fixed)
         )
         conn.commit()
         return redirect(url_for('finances.budget.index'))
@@ -230,6 +264,7 @@ def update(id):
     budget_type = request.form['type']
     start = request.form['start']
     end = request.form['end'] if request.form['end'] != '' else None
+    fixed = True if request.form['fixed'] == 'on' else False
     error = None
 
     if not label:
@@ -240,9 +275,9 @@ def update(id):
     else:
         curr, conn = get_db()
         curr.execute(
-            'UPDATE budget SET label = %s, amount = %s, type = %s, start = %s, end = %s'
+            'UPDATE budget SET label = %s, amount = %s, type = %s, start = %s, end = %s, fixed = %s'
             ' WHERE id = %s',
-            (label, amount, budget_type, start, end, id)
+            (label, amount, budget_type, start, end, fixed, id)
         )
         conn.commit()
         return redirect(url_for('finances.budget.index'))
