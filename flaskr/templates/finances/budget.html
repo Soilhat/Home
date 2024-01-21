@@ -56,6 +56,10 @@
           <div class="form-group">
             <input class="form-control form-control-user" type="date" name="end" placeholder="End" autocomplete="off">
           </div>
+          <div class="form-group custom-control custom-checkbox small">
+            <input type="checkbox" class="custom-control-input" id="customCheck" name="fixed">
+            <label class="custom-control-label" for="customCheck">Fixed</label>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
@@ -89,6 +93,12 @@
         <h6 class="m-0 font-weight-bold text-primary">Variables</h6>
         </div>
         {{render_table(variables, [{"name" :"Label"}, {"name" :"Budget"}, {"name" :"Real"}, {"name" :"Type"}])}}
+    </div>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Fixed</h6>
+        </div>
+        {{render_table(fixed, [{"name" :"Label"}, {"name": "Date"}, {"name" :"Budget"}, {"name" :"Real"}, {"name" :"Type"}])}}
     </div>
     <div class="card shadow mb-4">
         <div class="card-header py-3">
