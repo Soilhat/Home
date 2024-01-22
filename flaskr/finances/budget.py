@@ -107,11 +107,12 @@ def get_summary(curr, month):
                     AND trac.amount < 0
                     AND trac.Type <> 'TYPE_LOAN_PAYMENT'
                     AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
+                    AND (trac.budget NOT LIKE '%Saving%' OR trac.budget IS NULL)
             UNION ALL
                 SELECT budget.type, 0 as 'real_amount', budget.amount as budget
                 FROM budget
-                WHERE ( start IS NULL OR (YEAR(start) <= {int(month[0:4])} AND MONTH(start) <={int(month[6:7])}))
-                    AND ( end IS NULL OR (YEAR(end) >= {int(month[0:4])} AND MONTH(end) <={int(month[6:7])}))
+                WHERE ( start IS NULL OR (date_format(start,'%Y-%m') <= '{month}'))
+                    AND ( end IS NULL OR (date_format(end,'%Y-%m') >= '{month}'))
                     AND (type <> 'Income' OR type IS NULL)
             )labels
             GROUP BY type
