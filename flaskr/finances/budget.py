@@ -14,7 +14,6 @@ internal_trac = [
     'MONTEIRO ARTHUR',
     'MOHAMED SOILHAT',
     'VIE COMMUNE',
-    '00003310727 ECHEANCE',
     'EPARGNE',
     'FACTURES'
 ]
@@ -38,7 +37,6 @@ def index():
         variables = get_variables(curr, month),
         fixed = get_fixed(curr, month),
         expenses = get_expenses(curr, month),
-        loans= get_loans(curr, month),
         spendings= get_spendings(curr),
         month = month,
         get_index=get_index,
@@ -105,7 +103,6 @@ def get_summary(curr, month):
                 WHERE date_format(Date,'%Y-%m') = '{month}'
                     AND (budget.type <> 'Income' OR budget.type IS NULL)
                     AND trac.amount < 0
-                    AND trac.Type <> 'TYPE_LOAN_PAYMENT'
                     AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
                     AND (trac.budget NOT LIKE '%Saving%' OR trac.budget IS NULL)
             UNION ALL
@@ -137,7 +134,6 @@ def get_expenses(curr, month):
         WHERE 
             trac.amount < 0
             AND date_format(Date,'%Y-%m') = '{month}'
-            AND trac.Type <> 'TYPE_LOAN_PAYMENT'
             AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
             AND budget.label IS NULL
     """
@@ -181,38 +177,23 @@ def get_fixed(curr, month):
         SELECT budget.label, IFNULL(trac.Date,'') as date, to_currency(budget.amount) as budget, to_currency(abs(sum(trac.amount))) as 'real_amount', budget.type
         FROM budget
         LEFT JOIN transaction as trac on trac.label LIKE CONCAT('%', budget.label ,'%') AND date_format(Date,'%Y-%m') = date_format('{month}','%Y-%m')
-        WHERE  ( start IS NULL OR start < '{month}')
-            AND ( end IS NULL OR end > '{month}')
+        WHERE  ( start IS NULL OR start <= '{month}')
+            AND ( end IS NULL OR end >= '{month}')
             AND budget.fixed = 1
             AND (budget.type <> 'Income' OR budget.type IS NULL)
+            AND (trac.amount <= 0 OR trac.amount IS NULL)
         GROUP BY budget.label, budget.type
     """
     curr.execute(f"""
             {query}
         UNION ALL
-            select 'Total' label, '' as Date, to_currency(abs(sum(budget))) as budget, to_currency(abs(sum(real_amount))) as 'real_amount', '' as type
+            select 'Total' label, '' as date, to_currency(abs(sum(budget))) as budget, to_currency(abs(sum(real_amount))) as 'real_amount', '' as type
             FROM (
                 {query}
             )s
     """)
     return curr.fetchall()
 
-
-def get_loans(curr, month):
-    query = f"""
-        SELECT trac.label, trac.date, to_currency(abs(trac.amount)) as amount, IFNULL(budget,'') as budget
-	    FROM transaction as trac
-        WHERE trac.amount < 0 AND date_format(Date,'%Y-%m') = '{month}' AND Type = 'TYPE_LOAN_PAYMENT'
-    """
-    curr.execute(f"""
-            {query}
-        UNION ALL
-            select 'Total' label, '' as 'date', to_currency(abs(sum(amount))) as amount, '' as 'budget'
-            FROM (
-                {query}
-            )s
-    """)
-    return curr.fetchall()
 
 def get_spendings(curr):
     curr.execute("""
