@@ -128,9 +128,10 @@ def get_summary(curr, month):
 
 def get_expenses(curr, month):
     query = f"""
-        SELECT TRIM(LEADING '0' FROM trac.id) as id, trac.label, trac.date, to_currency(abs(trac.amount)) as amount, IFNULL(budget,'') as budget
+        SELECT TRIM(LEADING '0' FROM trac.id) as id, trac.label, account.bank, trac.date, to_currency(abs(trac.amount)) as amount, IFNULL(budget,'') as budget
 	    FROM transaction as trac
         LEFT OUTER JOIN budget on trac.label LIKE CONCAT('%', budget.label ,'%')
+        LEFT OUTER JOIN account on trac.account = account.id
         WHERE 
             trac.amount < 0
             AND date_format(Date,'%Y-%m') = '{month}'
@@ -140,7 +141,7 @@ def get_expenses(curr, month):
     curr.execute(f"""
             {query}
         UNION ALL
-            select '' as id, 'Total' label, '' as 'date', to_currency(abs(sum(amount))) as amount, '' as 'budget'
+            select '' as id, 'Total' label, '' as bank, '' as 'date', to_currency(abs(sum(amount))) as amount, '' as 'budget'
             FROM (
                 {query}
             )s
