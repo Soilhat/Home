@@ -11,7 +11,6 @@ internal_trac = [
     'MONTEIRO ARTHUR',
     'MOHAMED SOILHAT',
     'VIE COMMUNE',
-    '00003310727 ECHEANCE',
     'EPARGNE',
     'FACTURES'
 ]
@@ -30,6 +29,30 @@ def index():
     accounts = curr.fetchone()[0]
     curr.execute("SELECT sum(balance) FROM saving")
     savings = curr.fetchone()[0]
+    curr.execute("SELECT date_format(Date,'%Y-%m') FROM transaction ORDER BY Date DESC LIMIT 1")
+    month = curr.fetchone()[0]
+    curr.execute(f"""
+        SELECT sum(budget) + sum(amount)
+        FROM (
+            SELECT IFNULL(budget.type, fixed_bud.type) as type, trac.amount, 0 as budget
+            FROM transaction as trac
+            INNER JOIN account as acc on trac.account=acc.id
+            LEFT OUTER JOIN budget on budget.label = trac.budget AND date_format(Date,'%Y-%m') = '{month}'
+            LEFT OUTER JOIN budget as fixed_bud on trac.label LIKE CONCAT('%',fixed_bud.label,'%') AND date_format(Date,'%Y-%m') = '{month}'
+            WHERE date_format(Date,'%Y-%m') = '{month}'
+                AND (budget.type <> 'Income' OR budget.type IS NULL)
+                AND trac.amount < 0
+                AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
+                AND (trac.budget NOT LIKE '%Saving%' OR trac.budget IS NULL)
+        UNION ALL
+            SELECT budget.type, 0 as 'real_amount', budget.amount as budget
+            FROM budget
+            WHERE ( start IS NULL OR (date_format(start,'%Y-%m') <= '{month}'))
+                AND ( end IS NULL OR (date_format(end,'%Y-%m') >= '{month}'))
+                AND (type <> 'Income' OR type IS NULL)
+        )labels
+    """)
+    pending_budget = curr.fetchone()[0]
     curr.execute(
         """
         SELECT sum(balance)
@@ -63,6 +86,7 @@ def index():
     return render_template(
         "finances/dashboard.html",
         accounts=accounts,
+        pending_budget = pending_budget,
         savings=savings,
         loans=loans,
         expenses=json.dumps(expenses),
