@@ -50,24 +50,52 @@ def bud_list():
     curr = get_db()[0]
     curr.execute("""
         SELECT * FROM budget
-        WHERE end IS NULL OR end >= CURDATE()
+        WHERE (end IS NULL OR end >= CURDATE()) AND fixed = 0 AND type = "Income"
         ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
     """)
-    currents = curr.fetchall()
+    income_currents = curr.fetchall()
     curr.execute("""
         SELECT * FROM budget
-        WHERE end <= CURDATE()
+        WHERE (end IS NULL OR end >= CURDATE()) AND fixed = 0 AND type <> "Income"
         ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
     """)
-    olds = curr.fetchall()
+    var_currents = curr.fetchall()
+    curr.execute("""
+        SELECT * FROM budget
+        WHERE (end IS NULL OR end >= CURDATE()) AND fixed = 1 AND type <> "Income"
+        ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
+    """)
+    fixed_currents = curr.fetchall()
+    curr.execute("""
+        SELECT * FROM budget
+        WHERE end <= CURDATE() AND fixed = 0 AND type = "Income"
+        ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
+    """)
+    income_olds = curr.fetchall()
+    curr.execute("""
+        SELECT * FROM budget
+        WHERE end <= CURDATE() AND fixed = 0 AND type <> "Income"
+        ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
+    """)
+    var_olds = curr.fetchall()
+    curr.execute("""
+        SELECT * FROM budget
+        WHERE end <= CURDATE() AND fixed = 1 AND type <> "Income"
+        ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
+    """)
+    fixed_olds = curr.fetchall()
     curr.execute("SELECT DISTINCT type FROM budget")
     budget_type = curr.fetchall()
 
     return render_template(
         'finances/budgets.html',
-        currents = currents,
-        olds = olds,
+        var_currents = var_currents,
+        fixed_currents = fixed_currents,
+        var_olds = var_olds,
+        fixed_olds = fixed_olds,
         budget_type = budget_type,
+        income_currents = income_currents,
+        income_olds = income_olds,
     )
 
 
