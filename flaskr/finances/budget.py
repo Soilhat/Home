@@ -15,7 +15,8 @@ internal_trac = [
     'MOHAMED SOILHAT',
     'VIE COMMUNE',
     'EPARGNE',
-    'FACTURES'
+    'FACTURES',
+    'VIREMENT EMIS WEB Compte joint'
 ]
 
 @bp.route('/budget')
@@ -37,10 +38,36 @@ def index():
         variables = get_variables(curr, month),
         fixed = get_fixed(curr, month),
         expenses = get_expenses(curr, month),
-        spendings= get_spendings(curr),
+        spendings= get_spendings(curr, month),
         month = month,
         get_index=get_index,
         update_transac=update_transac
+    )
+
+@bp.route('/budgets')
+@login_required
+def bud_list():
+    curr = get_db()[0]
+    curr.execute("""
+        SELECT * FROM budget
+        WHERE end IS NULL OR end >= CURDATE()
+        ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
+    """)
+    currents = curr.fetchall()
+    curr.execute("""
+        SELECT * FROM budget
+        WHERE end <= CURDATE()
+        ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
+    """)
+    olds = curr.fetchall()
+    curr.execute("SELECT DISTINCT type FROM budget")
+    budget_type = curr.fetchall()
+
+    return render_template(
+        'finances/budgets.html',
+        currents = currents,
+        olds = olds,
+        budget_type = budget_type,
     )
 
 
@@ -52,8 +79,8 @@ def get_budgeted_income(curr, month):
         SELECT sum(budget.amount)
         FROM budget
         WHERE budget.type = 'Income' 
-            AND ( start IS NULL OR start < '{month}')
-            AND ( end IS NULL OR end > '{month}')
+            AND ( start IS NULL OR date_format(start,'%Y-%m') < '{month}')
+            AND ( end IS NULL OR date_format(end,'%Y-%m') > '{month}')
     """)
     return curr.fetchone()[0]
 
@@ -74,8 +101,8 @@ def get_revenus(curr, month):
             LEFT JOIN transaction as trac on Upper(trac.label) LIKE CONCAT('%',  Upper(budget.label), '%')
             WHERE (trac.id IS NULL OR date_format(Date,'%Y-%m') <> '{month}')
 		        AND (budget.type = 'Income' OR budget.type IS NULL) 
-                AND ( start IS NULL OR (YEAR(start) <= {int(month[0:4])} AND MONTH(start) <={int(month[6:7])}))
-                AND ( end IS NULL OR (YEAR(end) >= {int(month[0:4])} AND MONTH(end) <={int(month[6:7])}))
+                AND ( start IS NULL OR date_format(start,'%Y-%m') <= {month})
+                AND ( end IS NULL OR (date_format(end,'%Y-%m') >= {month}))
         )a
         GROUP BY budget_label
     """
@@ -196,12 +223,14 @@ def get_fixed(curr, month):
     return curr.fetchall()
 
 
-def get_spendings(curr):
-    curr.execute("""
+def get_spendings(curr, month):
+    curr.execute(f"""
         (
             SELECT budget.label
             FROM budget
             WHERE budget.type <> 'Income' AND budget.fixed = 0
+                AND ( start IS NULL OR date_format(start,'%Y-%m') <= '{month}')
+                AND ( end IS NULL OR date_format(end,'%Y-%m') >= '{month}')
         )
         UNION ALL
         (
@@ -220,7 +249,7 @@ def create():
     budget_type = request.form['type']
     start = request.form['start'] if request.form['start'] != '' else None
     end = request.form['end'] if request.form['end'] != '' else None
-    fixed = True if request.form['fixed'] == 'on' else False
+    fixed = request.form['fixed'] == 'on'
     error = None
 
     if not label:
@@ -236,7 +265,7 @@ def create():
             (label, amount, budget_type, start, end, fixed)
         )
         conn.commit()
-        return redirect(url_for('finances.budget.index'))
+        return redirect(url_for('finances.budget.bud_list'))
 
 
 @bp.route('/budget/<int:id>', methods=('POST',))
@@ -245,9 +274,9 @@ def update(id):
     label = request.form['label']
     amount = request.form['amount']
     budget_type = request.form['type']
-    start = request.form['start']
+    start = request.form['start'] if request.form['start'] != '' else None
     end = request.form['end'] if request.form['end'] != '' else None
-    fixed = True if request.form['fixed'] == 'on' else False
+    fixed = request.form['fixed'] == 'on'
     error = None
 
     if not label:
@@ -263,7 +292,7 @@ def update(id):
             (label, amount, budget_type, start, end, fixed, id)
         )
         conn.commit()
-        return redirect(url_for('finances.budget.index'))
+        return redirect(url_for('finances.budget.bud_list'))
 
 def get_budget(id):
     curr = get_db()[0]

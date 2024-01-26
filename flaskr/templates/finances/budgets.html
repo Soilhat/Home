@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block header %}
+{% block title %}Budgets{% endblock %}
+{% endblock %}
+
+
+{% macro render_modal(budget) -%}
+<div class="modal fade" id="updateBudget{{budget[0]}}" tabindex="-1" role="dialog" aria-labelledby="updateBudgetLabel"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="updateBudgetLabel">Update Budget</h5>
+        <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <form method="post" action="{{ url_for('finances.budget.update', id=budget[0]) }}">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Label</label>
+            <input class="form-control form-control-user" name="label" value="{{ request.form['label'] or budget[1] }}" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Amount</label>
+            <input class="form-control form-control-user" type="number" name="amount" value="{{ request.form['amount'] or budget[3] }}" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Type</label>
+            <input class="form-control form-control-user" list="budget-type" name="type" value="{{ request.form['type'] or budget[2] }}" placeholder="Type" required autocomplete="off">
+            <datalist id="budget-type">
+                {% for type in budget_type %}
+                <option value="{{type[0]}}"></option>
+                {% endfor %}
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label>Start date</label>
+            <input class="form-control form-control-user" type="date" name="start" value="{{ request.form['start'] or budget[4] }}" placeholder="Start" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>End date</label>
+            <input class="form-control form-control-user" type="date" name="end" value="{{ request.form['end'] or budget[5] }}" placeholder="End" autocomplete="off">
+          </div>
+          <div class="form-group custom-control custom-checkbox small">
+            <input type="checkbox" class="form-control form-control-user custom-control-input" id="customCheck" name="fixed" value="{{ request.form['fixed'] or budget[6] }}" {{ "checked" if request.form['fixed'] == 1 or budget[6] == 1 }}>
+            <label class="custom-control-label" for="customCheck">Fixed</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" type="submit">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{%- endmacro%}
+
+{% block content %}
+<div class="mb-4">
+    <a href="#" class="btn btn-primary btn-icon-split" data-toggle="modal" data-target="#createBudget">
+      <span class="icon text-white-50">
+          <i class="fas fa-plus"></i>
+      </span>
+      <span class="text">New budget</span>
+  </a>
+</div>
+
+<div class="modal fade" id="createBudget" tabindex="-1" role="dialog" aria-labelledby="createBudgetLabel"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createBudgetLabel">Create New Budget</h5>
+        <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <form action="{{ url_for('finances.budget.create') }}" method="post">
+        <div class="modal-body">
+          <div class="form-group">
+            <input class="form-control form-control-user" name="label" placeholder="Label" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <input class="form-control form-control-user" type="number" name="amount" placeholder="Amount" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <input class="form-control form-control-user" list="budget-type" name="type" placeholder="Type" required autocomplete="off">
+            <datalist id="budget-type">
+                {% for type in budget_type %}
+                <option value="{{type[0]}}"></option>
+                {% endfor %}
+            </datalist>
+          </div>
+          <div class="form-group">
+            <input class="form-control form-control-user" type="date" name="start" placeholder="Start" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <input class="form-control form-control-user" type="date" name="end" placeholder="End" autocomplete="off">
+          </div>
+          <div class="form-group custom-control custom-checkbox small">
+            <input type="checkbox" class="custom-control-input" id="customCheck" name="fixed">
+            <label class="custom-control-label" for="customCheck">Fixed</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" type="submit">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="col">
+  <div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h4 mb-0 text-gray-800">Current budgets</h1>
+  </div>
+  <div class="row">
+    {% for budget in currents %}
+    <div class="col-xl-3 col-md-6 mb-4" data-toggle="modal" data-target="#updateBudget{{budget[0]}}">
+      <div class="card border-left-info shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs font-weight-bold text-info text-uppercase mb-1">{{ budget[1] }}</div>
+              <div class="row no-gutters align-items-center">
+                <div class="col-auto">
+                  <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
+                    {% if budget[2] == "Income" %}+{% else %}-{% endif %}
+                    {{ budget[3] }}€
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{ render_modal(budget) }}
+    {% endfor %}
+  </div>
+</div>
+<div class="col">
+  <div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h4 mb-0 text-gray-800">Old budgets</h1>
+  </div>
+  <div class="row">
+    {% for budget in olds %}
+    <div class="col-xl-3 col-md-6 mb-4" data-toggle="modal" data-target="#updateBudget{{budget[0]}}">
+      <div class="card border-left-info shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs font-weight-bold text-info text-uppercase mb-1">{{ budget[1] }}</div>
+              <div class="row no-gutters align-items-center">
+                <div class="col-auto">
+                  <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
+                    {% if budget[2] == "Income" %}+{% else %}-{% endif %}
+                    {{ budget[3] }}€
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{ render_modal(budget) }}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

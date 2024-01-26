@@ -38,7 +38,7 @@
 				Finances
 			</div>
 
-			<!-- Nav Item - Saving -->
+			<!-- Nav Item - Dashboard -->
 			<li class="nav-item">
 				<a class="nav-link" href="{{ url_for('finances.dashboard.index') }}">
 					<i class="fas fa-fw fa-tag"></i>
@@ -46,7 +46,7 @@
 				</a>
 			</li>
 
-			<!-- Nav Item - Saving -->
+			<!-- Nav Item - Accounts -->
 			<li class="nav-item">
 				<a class="nav-link" href="{{ url_for('finances.accounts.index') }}">
 					<i class="fas fa-fw fa-tag"></i>
@@ -54,11 +54,19 @@
 				</a>
 			</li>
 			
-			<!-- Nav Item - Saving -->
+			<!-- Nav Item - Budget -->
 			<li class="nav-item">
 				<a class="nav-link" href="{{ url_for('finances.budget.index') }}">
 					<i class="fas fa-fw fa-piggy-bank"></i>
-					<span>Budget</span>
+					<span>Expenses</span>
+				</a>
+			</li>
+
+			<!-- Nav Item - Budget -->
+			<li class="nav-item">
+				<a class="nav-link" href="{{ url_for('finances.budget.bud_list') }}">
+					<i class="fas fa-fw fa-piggy-bank"></i>
+					<span>Budgets</span>
 				</a>
 			</li>
 
@@ -67,14 +75,6 @@
 				<a class="nav-link" href="{{ url_for('finances.saving.index') }}">
 					<i class="fas fa-fw fa-piggy-bank"></i>
 					<span>Saving</span>
-				</a>
-			</li>
-			
-			<!-- Nav Item - Saving -->
-			<li class="nav-item">
-				<a class="nav-link" href="">
-					<i class="fas fa-fw fa-tag"></i>
-					<span>Category</span>
 				</a>
 			</li>
 

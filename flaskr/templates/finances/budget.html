@@ -2,7 +2,7 @@
 {% from "components/table.html" import render_table with context %}
 
 {% block header %}
-{% block title %}Budget{% endblock %}
+{% block title %}Expenses{% endblock %}
 {% endblock %}
 
 {% macro need_real_higher_than_budget(cell, row) -%}
@@ -14,61 +14,6 @@
 {%- endmacro%}
 
 {% block content %}
-
-<div class="mb-4">
-    <a href="#" class="btn btn-primary btn-icon-split" data-toggle="modal" data-target="#createBudget">
-      <span class="icon text-white-50">
-          <i class="fas fa-plus"></i>
-      </span>
-      <span class="text">New budget</span>
-  </a>
-</div>
-
-<div class="modal fade" id="createBudget" tabindex="-1" role="dialog" aria-labelledby="createBudgetLabel"
-  aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="createBudgetLabel">Create New Budget</h5>
-        <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">×</span>
-        </button>
-      </div>
-      <form action="{{ url_for('finances.budget.create') }}" method="post">
-        <div class="modal-body">
-          <div class="form-group">
-            <input class="form-control form-control-user" name="label" placeholder="Label" required autocomplete="off">
-          </div>
-          <div class="form-group">
-            <input class="form-control form-control-user" type="number" name="amount" placeholder="Amount" required autocomplete="off">
-          </div>
-          <div class="form-group">
-            <input class="form-control form-control-user" list="budget-type" name="type" placeholder="Type" required autocomplete="off">
-            <datalist id="budget-type">
-                {% for type in budget_type %}
-                <option value="{{type[0]}}"></option>
-                {% endfor %}
-            </datalist>
-          </div>
-          <div class="form-group">
-            <input class="form-control form-control-user" type="date" name="start" placeholder="Start" autocomplete="off">
-          </div>
-          <div class="form-group">
-            <input class="form-control form-control-user" type="date" name="end" placeholder="End" autocomplete="off">
-          </div>
-          <div class="form-group custom-control custom-checkbox small">
-            <input type="checkbox" class="custom-control-input" id="customCheck" name="fixed">
-            <label class="custom-control-label" for="customCheck">Fixed</label>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-          <button class="btn btn-primary" type="submit">Submit</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
 
 <h2 class="h4">
     <input type="month" value="{{month}}" class="form-control bg-light border-0" style="font-size: inherit;width: inherit;" onchange="changeMonth()" id="monthPicker">

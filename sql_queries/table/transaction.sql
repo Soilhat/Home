@@ -8,7 +8,9 @@ CREATE TABLE transaction (
     type varchar(45) ,
     real_date date ,
     value_date date,
-    spending int,
+    budget_id int,
+    saving_id int,
     FOREIGN KEY (account) REFERENCES account(id)
-    FOREIGN KEY (spending) REFERENCES spending(id)
+    FOREIGN KEY (budget_id) REFERENCES budget(id)
+    FOREIGN KEY (saving_id) REFERENCES saving(id)
 )

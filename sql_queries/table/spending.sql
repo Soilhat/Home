@@ -1,6 +1,0 @@
-CREATE TABLE spending (
-    id INTEGER PRIMARY KEY AUTO_INCREMENT,
-    name CHAR(50) UNIQUE NOT NULL,
-    saving INTEGER NULL,
-    FOREIGN KEY (saving) REFERENCES saving(id)
-);
