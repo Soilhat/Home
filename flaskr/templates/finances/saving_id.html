@@ -1,0 +1,15 @@
+{% from "components/table.html" import render_table with context %}
+
+<div class="col">
+    <div class="card shadow mb-4">
+        {{render_table(
+            saving_data,
+            [
+                {"name" :"Label"},
+                {"name" :"Bank"},
+                {"name" :"Date"},
+                {"name" :"Amount"}
+            ]
+        )}}
+    </div>
+</div>

@@ -183,15 +183,22 @@ def get_summary(curr, month):
 
 def get_expenses(curr, month):
     query = f"""
-        SELECT TRIM(LEADING '0' FROM trac.id) as id, trac.label, account.bank, trac.date, to_currency(abs(trac.amount)) as amount, IFNULL(budget,'') as budget
+        SELECT TRIM(LEADING '0' FROM trac.id) as id, trac.label, account.bank, trac.date, to_currency(abs(trac.amount)) as amount, 
+            CASE 
+                WHEN saving_id is NOT NULL THEN concat('Saving - ',saving.name)
+                WHEN budget_id is NOT NULL THEN budget.label
+                ELSE ''
+            END budget
 	    FROM transaction as trac
-        LEFT OUTER JOIN budget on trac.label LIKE CONCAT('%', budget.label ,'%')
+        LEFT OUTER JOIN budget fix on trac.label LIKE CONCAT('%', fix.label ,'%')
+        LEFT JOIN budget on trac.budget_id = budget.id
+        LEFT JOIN saving on trac.saving_id = saving.id
         LEFT OUTER JOIN account on trac.account = account.id
         WHERE 
             trac.amount < 0
             AND date_format(Date,'%Y-%m') = '{month}'
             AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
-            AND budget.label IS NULL
+            AND fix.label IS NULL
     """
     curr.execute(f"""
             {query}
@@ -348,11 +355,24 @@ def delete(id):
 @bp.route('/transac/<int:id>', methods=('POST',))
 @login_required
 def update_transac(id):
-    budget = request.get_json()
+    budget: str = request.get_json()
     curr, conn = get_db()
+    if budget.startswith("Saving"):
+        budget_table = "saving"
+        budget_column = "saving_id"
+        compare = "concat('Saving - ',saving.name)"
+    else :
+        budget_table = "budget"
+        budget_column = "budget_id"
+        compare = "budget.label"
+
+    curr.execute(f""" SELECT id FROM {budget_table} WHERE {compare} = %s""",
+        (budget,)
+    )
+    budget_id = curr.fetchone()[0]
     curr.execute(
-        "UPDATE transaction SET budget = %s WHERE id LIKE '%%s'",
-        (budget, id)
+        f"""UPDATE transaction SET {budget_column} = %s WHERE id LIKE '%%s'""",
+        (budget_id, id)
     )
     conn.commit()
     return index()

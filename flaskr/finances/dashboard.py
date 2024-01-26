@@ -27,7 +27,10 @@ def index():
     """
     )
     accounts = curr.fetchone()[0]
-    curr.execute("SELECT sum(balance) FROM saving")
+    curr.execute("""SELECT sum(amount)
+        FROM transaction
+        LEFT JOIN saving on transaction.saving_id = saving.id
+        WHERE saving.id IS NOT NULL""")
     savings = curr.fetchone()[0]
     curr.execute("SELECT date_format(Date,'%Y-%m') FROM transaction ORDER BY Date DESC LIMIT 1")
     month = curr.fetchone()[0]
@@ -70,6 +73,7 @@ def index():
             LEFT Join loan on transaction.account=loan.id
             WHERE loan.id IS NULL
                 AND label NOT REGEXP '{"|".join(internal_trac)}'
+                AND account IS NOT NULL
             group by year(date),month(date)
             order by year(date),month(date);
         """

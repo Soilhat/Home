@@ -63,7 +63,13 @@
                         <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Rest (accounts - savings - pending budget)</div>
                         <div class="row no-gutters align-items-center">
                             <div class="col-auto">
-                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ accounts - savings - pending_budget }}€</div>
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
+                                    {% if savings<0 %}
+                                        {{accounts - pending_budget}}
+                                    {% else %}
+                                        {{accounts - savings - pending_budget}}
+                                    {% endif%}€
+                                </div>
                             </div>
                         </div>
                     </div>

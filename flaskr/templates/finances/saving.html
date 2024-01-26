@@ -5,7 +5,7 @@
 {% endblock %}
 
 
-{% macro render_modal(saving) -%}
+{% macro render_update_modal(saving) -%}
 <div class="modal fade" id="updateSaving{{saving[0]}}" tabindex="-1" role="dialog" aria-labelledby="updateSavingLabel"
   aria-hidden="true">
   <div class="modal-dialog" role="document">
@@ -21,10 +21,6 @@
           <div class="form-group">
             <label>Name</label>
             <input class="form-control form-control-user" name="name" value="{{ request.form['name'] or saving[1] }}" required autocomplete="off">
-          </div>
-          <div class="form-group">
-            <label>Balance</label>
-            <input class="form-control form-control-user" type="number" name="balance" value="{{ request.form['balance'] or saving[2] }}">
           </div>
           <div class="form-group">
             <label>Monthly Saving</label>
@@ -45,7 +41,27 @@
 </div>
 {%- endmacro%}
 
+
+{% macro render_table_modal(saving) -%}
+<div class="modal fade" id="tableSaving{{saving[0]}}" tabindex="-1" role="dialog" aria-labelledby="utableSavingLabel"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="tableSavingLabel">{{ saving[1] }} Transactions</h5>
+        <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div id="saving_transac{{saving[0]}}">
+      </div>
+    </div>
+  </div>
+</div>
+{%- endmacro%}
+
 {% block content %}
+<div class="row">
 <div class="mb-4">
     <a href="#" class="btn btn-primary btn-icon-split" data-toggle="modal" data-target="#createSaving">
       <span class="icon text-white-50">
@@ -71,9 +87,6 @@
             <input class="form-control form-control-user" name="name" placeholder="Name" required autocomplete="off">
           </div>
           <div class="form-group">
-            <input class="form-control form-control-user" type="number" name="balance" placeholder="Balance" required autocomplete="off">
-          </div>
-          <div class="form-group">
             <input class="form-control form-control-user" type="number" name="monthly_saving" placeholder="Monthly saving" autocomplete="off">
           </div>
           <div class="form-group">
@@ -89,6 +102,55 @@
   </div>
 </div>
 
+<div class="mb-4 ml-4">
+  <a href="#" class="btn btn-primary btn-icon-split" data-toggle="modal" data-target="#createTransaction">
+    <span class="icon text-white-50">
+        <i class="fas fa-plus"></i>
+    </span>
+    <span class="text">Add transaction</span>
+</a>
+</div>
+
+<div class="modal fade" id="createTransaction" tabindex="-1" role="dialog" aria-labelledby="createTransactionLabel"
+aria-hidden="true">
+<div class="modal-dialog" role="document">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title" id="createTransactionLabel">Create New Transaction</h5>
+      <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">×</span>
+      </button>
+    </div>
+    <form method="post" action="{{ url_for('finances.saving.create_transaction') }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <input class="form-control form-control-user" name="label" placeholder="Label" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <input class="form-control form-control-user" type="number" name="amount" placeholder="Amount" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <input class="form-control form-control-user" type="date" name="date" placeholder="Date" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <input class="form-control form-control-user" list="saving_names" name="saving" placeholder="Saving" required autocomplete="off">
+            <datalist id="saving_names">
+                {% for saving in savings %}
+                <option value="{{saving[0]}}">{{saving[1]}}</option>
+                {% endfor %}
+            </datalist>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" type="submit">Submit</button>
+      </div>
+    </form>
+  </div>
+</div>
+</div>
+</div>
+
 <div class="row">
 {% for saving in savings %}
 <div class="col-xl-3 col-md-6 mb-4">
@@ -97,12 +159,12 @@
       <div style="float: right; margin: -18px -9px 0px 0px; cursor: pointer;" data-toggle="modal" data-target="#updateSaving{{saving[0]}}">
         <svg class="feather feather-edit" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </div>
-      <div class="row no-gutters align-items-center">
+      <div class="row no-gutters align-items-center" onclick="fillSavingTable({{saving[0]}})" data-toggle="modal" data-target="#tableSaving{{saving[0]}}">
         <div class="col mr-2">
           <div class="text-xs font-weight-bold text-info text-uppercase mb-1">{{ saving[1] }}</div>
           <div class="row no-gutters align-items-center">
             <div class="col-auto">
-              <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ saving[2] }}</div>
+              <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ saving[2] }}€</div>
             </div>
             {% if saving[4] %}
             <div class="col">
@@ -118,7 +180,19 @@
     </div>
   </div>
 </div>
-{{ render_modal(saving) }}
+{{ render_update_modal(saving) }}
+{{ render_table_modal(saving) }}
 {% endfor %}
 </div>
+
+<script>
+  function fillSavingTable(id){
+    const response = fetch(`/saving/${id}`)
+      .then( response => response.text())
+      .then(text =>{
+        document.getElementById(`saving_transac${id}`).innerHTML = text
+      })
+  }
+</script>
+
 {% endblock %}
