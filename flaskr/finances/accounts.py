@@ -222,6 +222,9 @@ def refresh():
             print(f"Processing transactions : {account.label}")
             try:
                 transactions: list[Transaction] = list(woob.iter_history(account))
+                coming_transactions: list[Transaction] = list(
+                    woob.iter_coming(account)
+                )
             except (BrowserUnavailable, CallErrors) as exc:
                 print(f"{exc.errors}")
                 print(f"{account.backend} Browser Unavailable")
@@ -245,28 +248,70 @@ def refresh():
                     "TYPE_INSTANT",
                 ]
 
+                executemany(
+                    """
+                        UPDATE transaction
+                        SET id = %s,category = %s, date = %s, type = %s, value_date = %s, real_date = %s, coming = 0
+                        WHERE transaction.label = %s AND transaction.account = %s AND transaction.amount = %s AND coming = 1
+                    """,
+                    [
+                        (
+                            tra.id,
+                            tra.category,
+                            (
+                                tra.date.strftime("%Y-%m-%d %H:%M:%S")
+                                if not isinstance(tra.date, NotLoadedType)
+                                else None
+                            ),
+                            tr_type[tra.type],
+                            (
+                                tra.vdate.strftime("%Y-%m-%d %H:%M:%S")
+                                if not isinstance(tra.vdate, NotLoadedType)
+                                else None
+                            ),
+                            (
+                                tra.rdate.strftime("%Y-%m-%d %H:%M:%S")
+                                if not isinstance(tra.rdate, NotLoadedType)
+                                else None
+                            ),
+                            tra.label,
+                            account.id,
+                            tra.amount,
+                        )
+                        for tra in transactions
+                    ],
+                )
+
                 records = [
                     (
-                        hash_id(transaction.label) % 12345678
-                        + hash_id(transaction.date.strftime("%Y-%m-%d %H:%M:%S"))
-                        % 213054
-                        + hash_id(str(transaction.amount)) % 65430
-                        if transaction.id == ""
-                        else transaction.id,
+                        (
+                            hash_id(transaction.label) % 12345678
+                            + hash_id(transaction.date.strftime("%Y-%m-%d %H:%M:%S"))
+                            % 213054
+                            + hash_id(str(transaction.amount)) % 65430
+                            if transaction.id == ""
+                            else transaction.id
+                        ),
                         account.id,
                         transaction.amount,
                         transaction.category,
-                        transaction.date.strftime("%Y-%m-%d %H:%M:%S")
-                        if not isinstance(transaction.date, NotLoadedType)
-                        else None,
+                        (
+                            transaction.date.strftime("%Y-%m-%d %H:%M:%S")
+                            if not isinstance(transaction.date, NotLoadedType)
+                            else None
+                        ),
                         transaction.label,
                         tr_type[transaction.type],
-                        transaction.rdate.strftime("%Y-%m-%d %H:%M:%S")
-                        if not isinstance(transaction.rdate, NotLoadedType)
-                        else None,
-                        transaction.vdate.strftime("%Y-%m-%d %H:%M:%S")
-                        if not isinstance(transaction.vdate, NotLoadedType)
-                        else None,
+                        (
+                            transaction.rdate.strftime("%Y-%m-%d %H:%M:%S")
+                            if not isinstance(transaction.rdate, NotLoadedType)
+                            else None
+                        ),
+                        (
+                            transaction.vdate.strftime("%Y-%m-%d %H:%M:%S")
+                            if not isinstance(transaction.vdate, NotLoadedType)
+                            else None
+                        ),
                     )
                     for transaction in transactions
                 ]
@@ -284,4 +329,38 @@ def refresh():
                     records,
                 )
 
+            if coming_transactions:
+                records = [
+                    (
+                        (
+                            hash_id(transaction.label) % 12345678
+                            + hash_id(transaction.date.strftime("%Y-%m-%d %H:%M:%S"))
+                            % 213054
+                            + hash_id(str(transaction.amount)) % 65430
+                            if transaction.id == ""
+                            else transaction.id
+                        ),
+                        account.id,
+                        transaction.amount,
+                        (
+                            transaction.date.strftime("%Y-%m-%d %H:%M:%S")
+                            if not isinstance(transaction.date, NotLoadedType)
+                            else None
+                        ),
+                        transaction.label,
+                    )
+                    for transaction in coming_transactions
+                ]
+                executemany(
+                    """
+                        INSERT INTO transaction 
+                            (id, account, amount, date, label, coming)
+                        VALUES 
+                            (%s, %s, %s, %s, %s, 1)
+                        ON DUPLICATE KEY UPDATE
+                            id   =  VALUES(id)
+                            coming = 1
+                    """,
+                    records,
+                )
     return "refreshed"
