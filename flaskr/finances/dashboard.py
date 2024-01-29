@@ -46,13 +46,13 @@ def index():
             SELECT IFNULL(budget.type, fixed_bud.type) as type, trac.amount, 0 as budget
             FROM transaction as trac
             INNER JOIN account as acc on trac.account=acc.id
-            LEFT OUTER JOIN budget on budget.label = trac.budget AND date_format(Date,'%Y-%m') = '{month}'
+            LEFT OUTER JOIN budget on budget.id = trac.budget_id AND date_format(Date,'%Y-%m') = '{month}'
             LEFT OUTER JOIN budget as fixed_bud on trac.label LIKE CONCAT('%',fixed_bud.label,'%') AND date_format(Date,'%Y-%m') = '{month}'
             WHERE date_format(Date,'%Y-%m') = '{month}'
                 AND (budget.type <> 'Income' OR budget.type IS NULL)
                 AND trac.amount < 0
                 AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
-                AND (trac.budget NOT LIKE '%Saving%' OR trac.budget IS NULL)
+                AND trac.saving_id IS NULL
         UNION ALL
             SELECT budget.type, 0 as 'real_amount', budget.amount as budget
             FROM budget
