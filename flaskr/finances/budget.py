@@ -15,7 +15,8 @@ internal_trac = [
     "EPARGNE",
     "FACTURES",
     "VIREMENT EMIS WEB Compte joint",
-    "VR.PERMANENT EPARGNE"
+    "VR.PERMANENT EPARGNE",
+    "VIREMENT EMIS WEB MONTEIRO ARTHUR OU"
 ]
 
 
@@ -360,7 +361,7 @@ def create():
 @login_required
 def update(id):
     label = request.form["label"] if request.form["label"] != "" else None
-    amount = request.form["amount"]
+    amount = float(request.form["amount"])
     budget_type = request.form["type"]
     start = request.form["start"] if request.form["start"] != "" else None
     end = request.form["end"] if request.form["end"] != "" else None

@@ -14,7 +14,8 @@ internal_trac = [
     "EPARGNE",
     "FACTURES",
     "VIREMENT EMIS WEB Compte joint",
-    "VR.PERMANENT EPARGNE"
+    "VR.PERMANENT EPARGNE",
+    "VIREMENT EMIS WEB MONTEIRO ARTHUR OU"
 ]
 
 
