@@ -251,8 +251,8 @@ def refresh():
                 executemany(
                     """
                         UPDATE transaction
-                        SET id = %s,category = %s, date = %s, type = %s, value_date = %s, real_date = %s, coming = 0
-                        WHERE transaction.label = %s AND transaction.account = %s AND transaction.amount = %s AND coming = 1
+                        SET id = %s,category = %s, date = %s, type = %s, value_date = %s, real_date = %s, coming = 0, transaction.label = %s
+                        WHERE transaction.account = %s AND transaction.amount = %s AND transaction.coming = 1
                     """,
                     [
                         (
@@ -347,20 +347,21 @@ def refresh():
                             if not isinstance(transaction.date, NotLoadedType)
                             else None
                         ),
-                        transaction.label,
+                        transaction.label.replace("FACTURE CARTE ", ""),
                     )
-                    for transaction in coming_transactions
+                    for transaction in coming_transactions if transaction.label
                 ]
-                executemany(
-                    """
-                        INSERT INTO transaction 
-                            (id, account, amount, date, label, coming)
-                        VALUES 
-                            (%s, %s, %s, %s, %s, 1)
-                        ON DUPLICATE KEY UPDATE
-                            id   =  VALUES(id)
-                            coming = 1
-                    """,
-                    records,
-                )
+                if records:
+                    print(f"Adding {len(records)} coming transactions")
+                    executemany(
+                        """
+                            INSERT INTO transaction 
+                                (id, account, amount, date, label, coming)
+                            VALUES 
+                                (%s, %s, %s, %s, %s, 1)
+                            ON DUPLICATE KEY UPDATE
+                                coming = 1
+                        """,
+                        records,
+                    )
     return "refreshed"

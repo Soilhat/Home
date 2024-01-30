@@ -47,4 +47,4 @@ def executemany(query, records):
         print(cursor.rowcount, "Record inserted or updated successfully")
 
     except mysql.connector.Error as error:
-        print(f"Failed to insert record into MySQL table {error}")
+        print(f"Failed to run executemany into MySQL table {error}")

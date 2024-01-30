@@ -15,6 +15,7 @@ internal_trac = [
     "EPARGNE",
     "FACTURES",
     "VIREMENT EMIS WEB Compte joint",
+    "VR.PERMANENT EPARGNE"
 ]
 
 
@@ -144,7 +145,7 @@ def get_revenus(curr, month):
             LEFT OUTER JOIN budget on Upper(trac.label) LIKE CONCAT('%',  Upper(budget.label), '%')
             WHERE acc.type = 'CHECKING' AND trac.amount > 0 AND date_format(Date,'%Y-%m') = '{month}'
 		        AND (budget.type = 'Income' OR budget.type IS NULL)
-                AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
+                AND trac.label NOT REGEXP '^{"|^".join(internal_trac)}'
         UNION ALL
             SELECT DISTINCT budget.label, '' as date, to_currency(0) as 'real', to_currency(budget.amount) as budget, CASE WHEN budget.label IS NULL THEN trac.label else budget.label END as budget_label
             FROM budget
@@ -160,7 +161,10 @@ def get_revenus(curr, month):
         f"""
         {revenus}
     UNION ALL
-        select 'Total' label, '' date, to_currency(sum(real_amount)) as 'real_amount', to_currency(sum(budget)) as budget
+        select 'Total' label,
+            '' date,
+            to_currency(sum(CAST(REPLACE(REPLACE(real_amount,'€',''),',','.') as DECIMAL(9,2)))) as 'real_amount',
+            to_currency(sum(CAST(REPLACE(REPLACE(budget,'€',''),',','.') as DECIMAL(9,2)))) as budget
         FROM (
             {revenus}
 	    )s
@@ -173,7 +177,7 @@ def get_summary(curr, month):
     query = f"""
         SELECT type, to_prct(abs(sum(budget))*100/{get_budgeted_income(curr, month)}) as '%', to_currency(sum(budget))  as budget, to_currency(abs(sum(real_amount))) as 'real_amount'
         FROM (
-            SELECT type, to_currency(sum(amount)) as 'real_amount', sum(budget)  as budget
+            SELECT type, sum(amount) as 'real_amount', sum(budget)  as budget
             FROM (
                 SELECT IFNULL(budget.type, fixed_bud.type) as type, trac.amount, 0 as budget
                 FROM transaction as trac
@@ -183,10 +187,10 @@ def get_summary(curr, month):
                 WHERE date_format(Date,'%Y-%m') = '{month}'
                     AND (budget.type <> 'Income' OR budget.type IS NULL)
                     AND trac.amount < 0
-                    AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
+                    AND trac.label NOT REGEXP '^{"|^".join(internal_trac)}'
                     AND trac.saving_id IS NULL
             UNION ALL
-                SELECT budget.type, 0 as 'real_amount', budget.amount as budget
+                SELECT budget.type, 0.0 as 'real_amount', budget.amount as budget
                 FROM budget
                 WHERE ( start IS NULL OR (date_format(start,'%Y-%m') <= '{month}'))
                     AND ( end IS NULL OR (date_format(end,'%Y-%m') >= '{month}'))
@@ -200,7 +204,10 @@ def get_summary(curr, month):
         f"""
             {query}
         UNION ALL
-            select 'Total' type, to_prct(abs(sum(budget))*100/{get_budgeted_income(curr, month)}) as '%', to_currency(sum(budget)) as budget, to_currency(abs(sum(real_amount))) as 'real_amount'
+            select 'Total' type,
+                to_prct(abs(sum(budget))*100/{get_budgeted_income(curr, month)}) as '%',
+                to_currency(sum(CAST(REPLACE(REPLACE(budget,'€',''),',','.') as DECIMAL(9,2)))) as budget,
+                to_currency(abs(sum(CAST(REPLACE(REPLACE(real_amount,'€',''),',','.') as DECIMAL(9,2))))) as 'real_amount'
             FROM (
                 {query}
             )s
@@ -225,18 +232,18 @@ def get_expenses(curr, month):
         WHERE 
             trac.amount < 0
             AND date_format(Date,'%Y-%m') = '{month}'
-            AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
+            AND trac.label NOT REGEXP '^{"|^".join(internal_trac)}'
             AND fix.label IS NULL
     """
     curr.execute(
         f"""
             {query}
         UNION ALL
-            select '' as id, 'Total' label, '' as bank, '' as 'date', to_currency(abs(sum(amount))) as amount, '' as 'budget'
+            select '' as id, 'Total' label, '' as bank, '' as 'date', to_currency(abs(sum(CAST(REPLACE(REPLACE(amount,'€',''),',','.') as DECIMAL(9,2))))) as amount, '' as 'budget'
             FROM (
                 {query}
             )s
-        ORDER BY date DESC
+        ORDER BY date DESC, amount desc
     """
     )
     return curr.fetchall()
@@ -258,7 +265,10 @@ def get_variables(curr, month):
         f"""
             {query}
         UNION ALL
-            select 'Total' label, to_currency(abs(sum(budget))) as budget, to_currency(abs(sum(real_amount))) as 'real_amount', '' as type
+            select 'Total' label,
+                to_currency(abs(sum(CAST(REPLACE(REPLACE(budget,'€',''),',','.') as DECIMAL(9,2))))) as budget,
+                to_currency(abs(sum(CAST(REPLACE(REPLACE(real_amount,'€',''),',','.') as DECIMAL(9,2))))) as 'real_amount',
+                '' as type
             FROM (
                 {query}
             )s
@@ -285,7 +295,11 @@ def get_fixed(curr, month):
         f"""
             {query}
         UNION ALL
-            select 'Total' label, '' as date, to_currency(abs(sum(budget))) as budget, to_currency(abs(sum(real_amount))) as 'real_amount', '' as type
+            select 'Total' label,
+                '' as date,
+                to_currency(abs(sum(CAST(REPLACE(REPLACE(budget,'€',''),',','.') as DECIMAL(9,2))))) as budget,
+                to_currency(abs(sum(CAST(REPLACE(REPLACE(real_amount,'€',''),',','.') as DECIMAL(9,2))))) as 'real_amount',
+                '' as type
             FROM (
                 {query}
             )s
@@ -345,7 +359,7 @@ def create():
 @bp.route("/budget/<int:id>", methods=("POST",))
 @login_required
 def update(id):
-    label = request.form["label"]
+    label = request.form["label"] if request.form["label"] != "" else None
     amount = request.form["amount"]
     budget_type = request.form["type"]
     start = request.form["start"] if request.form["start"] != "" else None
@@ -405,10 +419,10 @@ def update_transac(id):
         compare = "budget.label"
 
     curr.execute(f""" SELECT id FROM {budget_table} WHERE {compare} = %s""", (budget,))
-    budget_id = curr.fetchone()[0]
+    budget_id = curr.fetchone()
     curr.execute(
         f"""UPDATE transaction SET {budget_column} = %s WHERE id LIKE '%%s'""",
-        (budget_id, id),
+        (budget_id[0], id),
     )
     conn.commit()
     return index()
