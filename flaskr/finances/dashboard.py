@@ -13,6 +13,8 @@ internal_trac = [
     "VIE COMMUNE",
     "EPARGNE",
     "FACTURES",
+    "VIREMENT EMIS WEB Compte joint",
+    "VR.PERMANENT EPARGNE"
 ]
 
 
@@ -51,7 +53,7 @@ def index():
             WHERE date_format(Date,'%Y-%m') = '{month}'
                 AND (budget.type <> 'Income' OR budget.type IS NULL)
                 AND trac.amount < 0
-                AND trac.label NOT REGEXP '{"|".join(internal_trac)}'
+                AND trac.label NOT REGEXP '^{"$|^".join(internal_trac)}$'
                 AND trac.saving_id IS NULL
         UNION ALL
             SELECT budget.type, 0 as 'real_amount', budget.amount as budget
@@ -76,10 +78,10 @@ def index():
                 date_format(date,'%M %Y') as Date,
                 sum(CASE WHEN amount<0 THEN ABS(amount) END) as expenses,
                 sum(CASE WHEN amount>0 THEN amount END) as earnings
-            from transaction
-            LEFT Join loan on transaction.account=loan.id
-            WHERE loan.id IS NULL
-                AND label NOT REGEXP '{"|".join(internal_trac)}'
+            from transaction trac
+            INNER JOIN account as acc on trac.account=acc.id
+            WHERE acc.type = 'CHECKING'
+                AND trac.label NOT REGEXP '^{"$|^".join(internal_trac)}$'
                 AND account IS NOT NULL
             group by year(date),month(date)
             order by year(date),month(date);

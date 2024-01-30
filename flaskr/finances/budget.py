@@ -145,7 +145,7 @@ def get_revenus(curr, month):
             LEFT OUTER JOIN budget on Upper(trac.label) LIKE CONCAT('%',  Upper(budget.label), '%')
             WHERE acc.type = 'CHECKING' AND trac.amount > 0 AND date_format(Date,'%Y-%m') = '{month}'
 		        AND (budget.type = 'Income' OR budget.type IS NULL)
-                AND trac.label NOT REGEXP '^{"|^".join(internal_trac)}'
+                AND trac.label NOT REGEXP '^{"$|^".join(internal_trac)}$'
         UNION ALL
             SELECT DISTINCT budget.label, '' as date, to_currency(0) as 'real', to_currency(budget.amount) as budget, CASE WHEN budget.label IS NULL THEN trac.label else budget.label END as budget_label
             FROM budget
@@ -187,7 +187,7 @@ def get_summary(curr, month):
                 WHERE date_format(Date,'%Y-%m') = '{month}'
                     AND (budget.type <> 'Income' OR budget.type IS NULL)
                     AND trac.amount < 0
-                    AND trac.label NOT REGEXP '^{"|^".join(internal_trac)}'
+                    AND trac.label NOT REGEXP '^{"$|^".join(internal_trac)}$'
                     AND trac.saving_id IS NULL
             UNION ALL
                 SELECT budget.type, 0.0 as 'real_amount', budget.amount as budget
@@ -232,7 +232,7 @@ def get_expenses(curr, month):
         WHERE 
             trac.amount < 0
             AND date_format(Date,'%Y-%m') = '{month}'
-            AND trac.label NOT REGEXP '^{"|^".join(internal_trac)}'
+            AND trac.label NOT REGEXP '^{"$|^".join(internal_trac)}$'
             AND fix.label IS NULL
     """
     curr.execute(
