@@ -118,6 +118,105 @@
         </div>
     </div>
 </div>
+<div class="col">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+      <h1 class="h4 mb-0 text-gray-800">Monthly expectation | Average last 3 months</h1>
+    </div>
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Revenus</div>
+                        <div class="row no-gutters align-items-center">
+                            <div class="col-auto">
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
+                                    {{ revenus }}€ | <span {% if revenus>revenus_avg %}style="color:red"{%else%}style="color:green"{%endif%}>{{ revenus_avg }}€</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Monthly Savings (projects)</div>
+                        <div class="row no-gutters align-items-center">
+                            <div class="col-auto">
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
+                                    {{ monthly_savings }}€ | <span {% if monthly_savings>monthly_savings_avg %}style="color:red"{%else%}style="color:green"{%endif%}>{{ monthly_savings_avg }}€</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Budgeted variable expenses</div>
+                        <div class="row no-gutters align-items-center">
+                            <div class="col-auto">
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
+                                    {{ bud_var_expenses }}€ | <span {% if bud_var_expenses_avg>bud_var_expenses %}style="color:red"{%else%}style="color:green"{%endif%}>{{ bud_var_expenses_avg }}€</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Budgeted fixed expenses</div>
+                        <div class="row no-gutters align-items-center">
+                            <div class="col-auto">
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
+                                    {{ bud_fix_expenses }}€ | <span {% if bud_fix_expenses_avg>bud_fix_expenses %}style="color:red"{%else%}style="color:green"{%endif%}>{{ bud_fix_expenses_avg }}€</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Monthly rest</div>
+                        <div class="row no-gutters align-items-center">
+                            <div class="col-auto">
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
+                                    {% set rest = revenus - (monthly_savings + bud_var_expenses + bud_fix_expenses) %}
+                                    {% set rest_avg = revenus_avg - (monthly_savings_avg + bud_var_expenses_avg + bud_fix_expenses_avg) %}
+                                    {{ rest }}€ | <span {% if rest>rest_avg %}style="color:red"{%else%}style="color:green"{%endif%}>{{ rest_avg }}€</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
 {% endblock %}
 {% block javascript %}
 <script>

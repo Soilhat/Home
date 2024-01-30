@@ -10,13 +10,14 @@ internal_trac = [
     "VIREMENT EN VOTRE FAVEUR DE MONTEIRO ARTHUR",
     "MONTEIRO ARTHUR",
     "MOHAMED SOILHAT",
-    "VIE COMMUNE",
+    "VIE COMMUNE .+",
     "EPARGNE",
     "FACTURES",
     "VIREMENT EMIS WEB Compte joint",
     "VR.PERMANENT EPARGNE",
     "VIREMENT EMIS WEB MONTEIRO ARTHUR OU",
-    "VIREMENT EMIS WEB MONTEIRO ARTHUR"
+    "VIREMENT EMIS WEB MONTEIRO ARTHUR",
+    "MLE MOHAMED SOILHAT"
 ]
 
 
@@ -90,6 +91,85 @@ def index():
         """
     )
     expenses_data = curr.fetchall()
+    curr.execute(
+        """
+        SELECT sum(amount)
+        FROM budget
+        WHERE Type = 'Income'
+            AND (end IS NULL OR end > curdate())
+        """
+    )
+    revenus = curr.fetchone()[0]
+    curr.execute(
+        f"""
+        SELECT CAST(sum(amount)/3 AS DECIMAL(10,2))
+        FROM transaction
+        WHERE amount > 0
+			AND type = 'TYPE_TRANSFER'
+            AND label NOT REGEXP '^{"$|^".join(internal_trac)}$'
+            AND date >= DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -3 MONTH)
+        """
+    )
+    revenus_avg = curr.fetchone()[0]
+    curr.execute(
+        """
+        SELECT sum(monthly_saving)
+        FROM saving
+        """
+    )
+    monthly_savings = curr.fetchone()[0]
+    curr.execute(
+        """
+        SELECT CAST(sum(amount)/3 AS DECIMAL(10,2))
+        FROM transaction
+        WHERE saving_id IS NOT NULL
+            AND amount > 0
+            AND date >= DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -3 MONTH)
+        """
+    )
+    monthly_savings_avg = curr.fetchone()[0]
+    curr.execute(
+        """
+        SELECT sum(amount)
+        FROM budget
+        WHERE fixed = 0
+            AND Type <> 'Income'
+            AND (end IS NULL OR end > curdate())
+        """
+    )
+    bud_var_expenses = curr.fetchone()[0]
+    curr.execute(
+        """
+        SELECT ABS(CAST(sum(transaction.amount)/3 AS DECIMAL(10,2)))
+        FROM transaction
+        LEFT JOIN budget on budget_id = budget.id
+        WHERE budget_id IS NOT NULL
+            AND budget.Type <> 'Income'
+            AND fixed = 0
+            AND date >= DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -3 MONTH)
+        """
+    )
+    bud_var_expenses_avg = curr.fetchone()[0]
+    curr.execute(
+        """
+        SELECT sum(amount)
+        FROM budget
+        WHERE fixed = 1
+            AND Type <> 'Income'
+            AND (end IS NULL OR end > curdate())
+        """
+    )
+    bud_fix_expenses = curr.fetchone()[0]
+    curr.execute(
+        """
+        SELECT ABS(CAST(sum(transaction.amount)/3 AS DECIMAL(10,2)))
+        FROM transaction
+        LEFT JOIN budget on transaction.label LIKE CONCAT('%',budget.label,'%')
+        WHERE budget.fixed = 1
+            AND date >= DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -3 MONTH)
+        """
+    )
+    bud_fix_expenses_avg = curr.fetchone()[0]
     dates = []
     expenses = []
     earnings = []
@@ -104,6 +184,14 @@ def index():
         pending_budget=pending_budget,
         savings=savings,
         loans=loans,
+        revenus=revenus,
+        revenus_avg=revenus_avg,
+        monthly_savings=monthly_savings,
+        monthly_savings_avg=monthly_savings_avg,
+        bud_var_expenses=bud_var_expenses,
+        bud_var_expenses_avg = bud_var_expenses_avg,
+        bud_fix_expenses=bud_fix_expenses,
+        bud_fix_expenses_avg=bud_fix_expenses_avg,
         expenses=json.dumps(expenses),
         dates=json.dumps(dates),
         earnings=json.dumps(earnings),
