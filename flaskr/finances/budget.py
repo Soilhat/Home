@@ -256,7 +256,9 @@ def get_expenses(curr, month):
 def get_variables(curr, month):
     month = f"{month}-01"
     query = f"""
-        SELECT budget.label, to_currency(budget.amount) as budget, to_currency(abs(sum(trac.amount))) as 'real_amount', budget.type
+        SELECT budget.label, to_currency(budget.amount) as budget, to_currency(abs(sum(trac.amount))) as 'real_amount', 
+           to_prct( IF(date_format(curdate(),'%Y-%m') = date_format('{month}','%Y-%m'), curdate()/LAST_DAY(curdate()), 100)-(abs(sum(trac.amount)/ budget.amount))*100)
+        remaining_prct, budget.type
         FROM budget
         LEFT JOIN transaction as trac on budget.id = trac.budget_id AND date_format(Date,'%Y-%m') = date_format('{month}','%Y-%m')
         WHERE  ( start IS NULL OR start < '{month}')
@@ -272,6 +274,7 @@ def get_variables(curr, month):
             select 'Total' label,
                 to_currency(abs(sum(CAST(REPLACE(REPLACE(budget,'€',''),',','.') as DECIMAL(9,2))))) as budget,
                 to_currency(abs(sum(CAST(REPLACE(REPLACE(real_amount,'€',''),',','.') as DECIMAL(9,2))))) as 'real_amount',
+                '' as remaining_prct,
                 '' as type
             FROM (
                 {query}
