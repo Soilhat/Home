@@ -45,6 +45,7 @@
           </div>
           <div class="form-group custom-control custom-checkbox small">
             <input type="checkbox" class="form-control form-control-user custom-control-input" id="customUpdateCheck" name="fixed" {{ "checked" if request.form['fixed'] == 1 or budget[6] == 1 }}>
+            <input type="hidden" class="form-control form-control-user custom-control-input" id="customUpdateCheck" name="fixed" value="off">
             <label class="custom-control-label" for="customUpdateCheck">Fixed</label>
           </div>
         </div>
