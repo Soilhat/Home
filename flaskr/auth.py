@@ -17,8 +17,36 @@ from mysql.connector.errors import IntegrityError
 
 from flaskr.db import get_db
 
+from hashlib import sha256
+import rsa
+import base64
+
+
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
+class EncryptionKey:
+    _publicKey = None
+    _privateKey = None
+    _hashedIP = ""
+
+    def __init__(self, hashedIP):
+        self._hashedIP = hashedIP
+
+    def generateKeys(self):
+        (pub, priv) = rsa.newkeys(1024)
+        self._publicKey = pub
+        self._privateKey = priv
+
+    def isEqual(self, hashedIP):
+        return hashedIP == self._hashedIP
+
+    def isAuthorizedToGenerateNewKey(self):
+        return True
+    
+    def decrypt(self, message):
+        return (rsa.decrypt(base64.b64decode(message), self._privateKey)).decode("utf-8") 
+
+g_registeredEncryptionKeys = []
 
 @bp.route("/register", methods=("GET", "POST"))
 def register():
@@ -54,6 +82,26 @@ def register():
 
     return render_template("auth/register.html")
 
+@bp.route("/encryption")
+def generateEncryptionKeys():
+    hashedCurrentIP = (sha256(request.remote_addr.encode('utf-8')).hexdigest())
+
+    global g_registeredEncryptionKeys
+    encryptionKey = None
+    for registeredKey in g_registeredEncryptionKeys:
+        if (registeredKey.isEqual(hashedCurrentIP)):
+            if (registeredKey.isAuthorizedToGenerateNewKey() == False):
+                return ""  
+            else:
+                encryptionKey = registeredKey
+     
+    if encryptionKey == None:
+        g_registeredEncryptionKeys.append(EncryptionKey(hashedCurrentIP))   
+        encryptionKey = g_registeredEncryptionKeys[-1]
+
+    encryptionKey.generateKeys()
+
+    return base64.b64encode(encryptionKey._publicKey._save_pkcs1_der())
 
 @bp.route("/login", methods=("GET", "POST"))
 def login():
@@ -64,10 +112,22 @@ def login():
     or the validation succeeds, the user's id is stored in a new session
     and redirect to index page."""
     if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
         curr = get_db()[0]
         error = None
+
+        username = request.form["username"]
+        hashedCurrentIP = (sha256(request.remote_addr.encode('utf-8')).hexdigest())
+        encryptedPassword = request.form["password"]
+        password = ""
+        global g_registeredEncryptionKeys
+        for registeredKey in g_registeredEncryptionKeys:
+            if (registeredKey.isEqual(hashedCurrentIP)):
+                password = registeredKey.decrypt(encryptedPassword)
+
+        if password == "":
+            error = "No encryption key found"
+            flash(error)
+
         curr.execute("SELECT * FROM user WHERE username = %s", (username,))
         user = curr.fetchone()
 
