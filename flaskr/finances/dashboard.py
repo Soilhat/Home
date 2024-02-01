@@ -107,7 +107,7 @@ def index():
         WHERE amount > 0
 			AND type = 'TYPE_TRANSFER'
             AND label NOT REGEXP '^{"$|^".join(internal_trac)}$'
-            AND date >= DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -3 MONTH)
+            AND date BETWEEN DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -4 MONTH) AND DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -1 MONTH)
         """
     )
     revenus_avg = curr.fetchone()[0]
@@ -124,7 +124,7 @@ def index():
         FROM transaction
         WHERE saving_id IS NOT NULL
             AND amount > 0
-            AND date >= DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -3 MONTH)
+            AND date BETWEEN DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -4 MONTH) AND DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -1 MONTH)
         """
     )
     monthly_savings_avg = curr.fetchone()[0]
@@ -146,7 +146,7 @@ def index():
         WHERE budget_id IS NOT NULL
             AND budget.Type <> 'Income'
             AND fixed = 0
-            AND date >= DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -3 MONTH)
+            AND date BETWEEN DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -4 MONTH) AND DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -1 MONTH)
         """
     )
     bud_var_expenses_avg = curr.fetchone()[0]
@@ -166,7 +166,7 @@ def index():
         FROM transaction
         LEFT JOIN budget on transaction.label LIKE CONCAT('%',budget.label,'%')
         WHERE budget.fixed = 1
-            AND date >= DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -3 MONTH)
+            AND date BETWEEN DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -4 MONTH) AND DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -1 MONTH)
         """
     )
     bud_fix_expenses_avg = curr.fetchone()[0]
