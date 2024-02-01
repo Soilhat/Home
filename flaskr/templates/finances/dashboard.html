@@ -15,7 +15,7 @@
                         <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Accounts</div>
                         <div class="row no-gutters align-items-center">
                             <div class="col-auto">
-                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ accounts }}€</div>
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ "{:0,.2f}".format(accounts).replace(","," ") }}€</div>
                             </div>
                         </div>
                     </div>
@@ -31,7 +31,7 @@
                         <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Savings (projects)</div>
                         <div class="row no-gutters align-items-center">
                             <div class="col-auto">
-                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ savings }}€</div>
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ "{:0,.2f}".format(savings).replace(","," ") }}€</div>
                             </div>
                         </div>
                     </div>
@@ -47,7 +47,7 @@
                         <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Pending budget (budget left to spend this month)</div>
                         <div class="row no-gutters align-items-center">
                             <div class="col-auto">
-                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ pending_budget }}€</div>
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ "{:0,.2f}".format(pending_budget).replace(","," ") }}€</div>
                             </div>
                         </div>
                     </div>
@@ -65,9 +65,9 @@
                             <div class="col-auto">
                                 <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
                                     {% if savings<0 %}
-                                        {{accounts - pending_budget}}
+                                        {{"{:0,.2f}".format(accounts - pending_budget).replace(","," ")}}
                                     {% else %}
-                                        {{accounts - savings - pending_budget}}
+                                        {{"{:0,.2f}".format(accounts - savings - pending_budget).replace(","," ")}}
                                     {% endif%}€
                                 </div>
                             </div>
@@ -85,7 +85,7 @@
                         <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Loans</div>
                         <div class="row no-gutters align-items-center">
                             <div class="col-auto">
-                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ loans }}€</div>
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ "{:0,.2f}".format(loans).replace(","," ") }}€</div>
                             </div>
                         </div>
                     </div>
@@ -132,7 +132,7 @@
                         <div class="row no-gutters align-items-center">
                             <div class="col-auto">
                                 <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
-                                    {{ revenus }}€ | <span {% if revenus>revenus_avg %}style="color:red"{%else%}style="color:green"{%endif%}>{{ revenus_avg }}€</span>
+                                    {{ "{:0,.2f}".format(revenus).replace(","," ") }}€ | <span {% if revenus>revenus_avg %}style="color:red"{%else%}style="color:green"{%endif%}>{{ "{:0,.2f}".format(revenus_avg).replace(","," ") }}€</span>
                                 </div>
                             </div>
                         </div>
@@ -150,7 +150,10 @@
                         <div class="row no-gutters align-items-center">
                             <div class="col-auto">
                                 <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
-                                    {{ monthly_savings }}€ | <span {% if monthly_savings>monthly_savings_avg %}style="color:red"{%else%}style="color:green"{%endif%}>{{ monthly_savings_avg }}€</span>
+                                    {{ "{:0,.2f}".format(monthly_savings).replace(","," ") }}€ | <span 
+                                        {% if monthly_savings>monthly_savings_avg %}style="color:red"
+                                        {%else%}style="color:green"{%endif%}
+                                        >{{ "{:0,.2f}".format(monthly_savings_avg).replace(","," ") }}€</span>
                                 </div>
                             </div>
                         </div>
@@ -168,7 +171,10 @@
                         <div class="row no-gutters align-items-center">
                             <div class="col-auto">
                                 <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
-                                    {{ bud_var_expenses }}€ | <span {% if bud_var_expenses_avg>bud_var_expenses %}style="color:red"{%else%}style="color:green"{%endif%}>{{ bud_var_expenses_avg }}€</span>
+                                    {{ "{:0,.2f}".format(bud_var_expenses).replace(","," ") }}€ | <span 
+                                    {% if bud_var_expenses_avg>bud_var_expenses %}style="color:red"
+                                    {%else%}style="color:green"{%endif%}>
+                                    {{ "{:0,.2f}".format(bud_var_expenses_avg).replace(","," ") }}€</span>
                                 </div>
                             </div>
                         </div>
@@ -186,7 +192,9 @@
                         <div class="row no-gutters align-items-center">
                             <div class="col-auto">
                                 <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
-                                    {{ bud_fix_expenses }}€ | <span {% if bud_fix_expenses_avg>bud_fix_expenses %}style="color:red"{%else%}style="color:green"{%endif%}>{{ bud_fix_expenses_avg }}€</span>
+                                    {{ "{:0,.2f}".format(bud_fix_expenses).replace(","," ") }}€ | <span 
+                                    {% if bud_fix_expenses_avg>bud_fix_expenses %}style="color:red"{%else%}style="color:green"{%endif%}
+                                    >{{ "{:0,.2f}".format(bud_fix_expenses_avg).replace(","," ") }}€</span>
                                 </div>
                             </div>
                         </div>
@@ -206,7 +214,7 @@
                                 <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
                                     {% set rest = revenus - (monthly_savings + bud_var_expenses + bud_fix_expenses) %}
                                     {% set rest_avg = revenus_avg - (monthly_savings_avg + bud_var_expenses_avg + bud_fix_expenses_avg) %}
-                                    {{ rest }}€ | <span {% if rest>rest_avg %}style="color:red"{%else%}style="color:green"{%endif%}>{{ rest_avg }}€</span>
+                                    {{ "{:0,.2f}".format(rest).replace(","," ") }}€ | <span {% if rest>rest_avg %}style="color:red"{%else%}style="color:green"{%endif%}>{{ "{:0,.2f}".format(rest_avg).replace(","," ") }}€</span>
                                 </div>
                             </div>
                         </div>
