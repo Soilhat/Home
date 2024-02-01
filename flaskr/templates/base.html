@@ -95,10 +95,13 @@
 				<!-- Topbar -->
 				<nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
 
+
 					<!-- Sidebar Toggle (Topbar) -->
 					<button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
 						<i class="fa fa-bars"></i>
 					</button>
+
+					<div>Last refresh : <span id="refreshed_date"></span></div>
 
 					<!-- Topbar Navbar -->
 					<ul class="navbar-nav ml-auto">
@@ -203,6 +206,13 @@
 			});
 		});
 	</script>
+	<script>
+		const response = fetch(`/accounts/refresh_date`)
+		.then( response => response.text())
+		.then(text =>{
+			document.getElementById(`refreshed_date`).innerHTML = text
+		})
+	  </script>
 	{% block javascript %}{% endblock %}
 </body>
 

@@ -1,4 +1,6 @@
+import os
 import hashlib
+from datetime import datetime
 from math import ceil
 
 from flask import Blueprint, current_app, render_template, request
@@ -364,4 +366,16 @@ def refresh():
                         """,
                         records,
                     )
+    with open("refreshed_date.txt", "w", encoding="utf-8") as file:
+        file.write(datetime.today().strftime("%Y-%m-%d"))
     return "refreshed"
+
+@bp.route("/accounts/refresh_date")
+@login_required
+def refresh_date():
+    date = "unknown"
+    path = "refreshed_date.txt"
+    if os.path.isfile(path):
+        with open(path, "r", encoding="utf-8") as file:
+            date = file.read()
+    return date
