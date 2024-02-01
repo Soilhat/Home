@@ -20,8 +20,27 @@
 
   <!-- Custom styles for this template-->
   <link href="{{url_for('static',filename='css/sb-admin-2.min.css')}}" rel="stylesheet">
+  <script src="{{url_for('static',filename='js/jsencrypt.min.js')}}"></script>
 
 </head>
+
+<script>
+  function submit(){
+    let username = document.getElementById("username").value;
+    let password = document.getElementById("password").value;
+
+    const response = fetch('/auth/encryption')
+      .then( response => response.text())
+      .then(publicKey =>{
+        var encrypt = new JSEncrypt();
+        encrypt.setPublicKey(publicKey);
+        var encryptedPassword = encrypt.encrypt(password);
+
+        document.getElementById("password").value = encryptedPassword;
+        document.getElementById("loginForm").submit();
+      })
+  }
+</script>
 
 <body class="bg-gradient-primary">
 
@@ -42,7 +61,7 @@
                   <div class="text-center">
                     <h1 class="h4 text-gray-900 mb-4">Welcome Back!</h1>
                   </div>
-                  <form class="user" method="post">
+                  <form class="user" method="post" id="loginForm">
                     <div class="form-group">
                       <input type="username" class="form-control form-control-user" id="username" name="username"
                         placeholder="Username" autocomplete="off">
@@ -51,10 +70,10 @@
                       <input type="password" class="form-control form-control-user" id="password" name="password"
                         placeholder="Password">
                     </div>
-                    <button type="submit" class="btn btn-primary btn-user btn-block">
-                      Login
-                    </button>
                   </form>
+                  <button type="submit" onclick="submit()" class="btn btn-primary btn-user btn-block">
+                    Login
+                  </button>
                   <hr>
                   <div class="text-center">
                     <a class="small" href="{{url_for('auth.register')}}">Create an Account!</a>
