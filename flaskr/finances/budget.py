@@ -48,6 +48,7 @@ def index():
         month=month,
         get_index=get_index,
         update_transac=update_transac,
+        format_remaining=format_remaining,
     )
 
 
@@ -257,7 +258,7 @@ def get_variables(curr, month):
     month = f"{month}-01"
     query = f"""
         SELECT budget.label, to_currency(budget.amount) as budget, to_currency(abs(sum(trac.amount))) as 'real_amount', 
-           to_prct( IF(date_format(curdate(),'%Y-%m') = date_format('{month}','%Y-%m'), curdate()/LAST_DAY(curdate()), 100)-(abs(sum(trac.amount)/ budget.amount))*100)
+           to_prct( IF(date_format(curdate(),'%Y-%m') = date_format('{month}','%Y-%m'), DAYOFMONTH(curdate())/DAYOFMONTH(LAST_DAY(curdate()))*100, 100)-(IFNULL(abs(sum(trac.amount)/ budget.amount),0))*100)
         remaining_prct, budget.type
         FROM budget
         LEFT JOIN transaction as trac on budget.id = trac.budget_id AND date_format(Date,'%Y-%m') = date_format('{month}','%Y-%m')
@@ -433,3 +434,11 @@ def update_transac(id):
     )
     conn.commit()
     return index()
+
+
+def format_remaining(row, cell_id):
+    if row[cell_id] == "":
+        return ""
+    if float(row[cell_id].replace("%","")) > 0 :
+        return "color:green"
+    return "color:red"

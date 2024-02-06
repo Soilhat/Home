@@ -37,7 +37,20 @@
         <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary">Variables</h6>
         </div>
-        {{render_table(variables, [{"name" :"Label"}, {"name" :"Budget"}, {"name" :"Real", "compare":1}, {"name":"Remaining"},{"name" :"Type"}])}}
+        {{ render_table(
+            variables,
+            [
+                {"name" :"Label"},
+                {"name" :"Budget"},
+                {"name" :"Real", "compare":1},
+                {
+                    "name":"Remaining",
+                    "type": "custom_css",
+                    "callback": format_remaining
+                },
+                {"name" :"Type"}
+            ]
+        ) }}
     </div>
     <div class="card shadow mb-4">
         <div class="card-header py-3">

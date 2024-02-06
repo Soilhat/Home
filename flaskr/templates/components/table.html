@@ -36,23 +36,25 @@
                 {% for row in data %}
                 <tr>
                     {% for index in range(row|length) %}
-                    {% if "type" not in columns[index] or columns[index].type != "hide" %}
-                    <td>
-                      {% if "type" not in columns[index] %}
-                        {% if "compare" not in columns[index] %}
-                          {{ row[index] }}
-                        {% else %}
-                          <div {% if row[index].replace("€","").replace(",",".")| float>row[columns[index].compare].replace("€","").replace(",",".")| float %}style="color:red"{%else%}style="color:green"{%endif%}>{{ row[index] }}</div>
-                        {%endif%}
-                      {% elif columns[index].type == "select" %}
-                        <select id="{{get_index(row,columns, index)}}" onchange="trigger_function({{columns[index].onchange}}, [ {% for value in row %} '{{value}}', {% endfor %} ], {{columns}})">
-                          {% for opt in columns[index].options %}
-                            <option {% if row[index]==opt %} selected="selected" {% endif %}>{{ opt }}</option>
-                          {% endfor %}
-                        </select>
+                      {% if "type" not in columns[index] or columns[index].type != "hide" %}
+                      <td>
+                        {% if "type" not in columns[index] %}
+                          {% if "compare" not in columns[index] %}
+                            {{ row[index] }}
+                          {% else %}
+                            <div {% if row[index].replace("€","").replace(",",".")| float>row[columns[index].compare].replace("€","").replace(",",".")| float %}style="color:red"{%else%}style="color:green"{%endif%}>{{ row[index] }}</div>
+                          {%endif%}
+                        {% elif columns[index].type == "select" %}
+                          <select id="{{get_index(row,columns, index)}}" onchange="trigger_function({{columns[index].onchange}}, [ {% for value in row %} '{{value}}', {% endfor %} ], {{columns}})">
+                            {% for opt in columns[index].options %}
+                              <option {% if row[index]==opt %} selected="selected" {% endif %}>{{ opt }}</option>
+                            {% endfor %}
+                          </select>
+                        {% elif columns[index].type == "custom_css" %}
+                          <span style="{{columns[index].callback(row, index)}}">{{ row[index] }}</span>
+                        {% endif %}
+                      </td>
                       {% endif %}
-                    </td>
-                    {% endif %}
                     {% endfor %}
                 </tr>
                 {% endfor %}
