@@ -9,7 +9,7 @@ internal_trac = [
     "MME SOILHAT MOHAMED",
     "VIREMENT EN VOTRE FAVEUR DE MONTEIRO ARTHUR",
     "MONTEIRO ARTHUR",
-    "MOHAMED SOILHAT",
+    "MOHAMED SOILHAT.+",
     "VIE COMMUNE",
     "VIE COMMUNE.+",
     "EPARGNE",
@@ -87,6 +87,9 @@ def index():
             WHERE acc.type = 'CHECKING'
                 AND trac.label NOT REGEXP '^{"$|^".join(internal_trac)}$'
                 AND account IS NOT NULL
+                AND date BETWEEN 
+                    DATE_ADD(LAST_DAY(DATE_ADD(DATE_ADD((SELECT MAX(date) from transaction), INTERVAL -1 YEAR), INTERVAL -2 MONTH)),INTERVAL 1 DAY)
+                    AND LAST_DAY(DATE_ADD((SELECT MAX(date) from transaction), INTERVAL -1 MONTH))
             group by year(date),month(date)
             order by year(date),month(date);
         """
