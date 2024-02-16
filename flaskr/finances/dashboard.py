@@ -14,6 +14,7 @@ internal_trac = [
     "VIE COMMUNE.+",
     "EPARGNE",
     "FACTURES",
+    "VR.PERMANENT FACTURES",
     "VIREMENT EMIS WEB Compte joint",
     "VR.PERMANENT EPARGNE",
     "VIREMENT EMIS WEB MONTEIRO ARTHUR OU",
