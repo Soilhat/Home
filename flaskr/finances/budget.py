@@ -10,6 +10,7 @@ internal_trac = [
     "MME SOILHAT MOHAMED",
     "VIREMENT EN VOTRE FAVEUR DE MONTEIRO ARTHUR",
     "MONTEIRO ARTHUR",
+    "MOHAMED SOILHAT",
     "MOHAMED SOILHAT.+",
     "VIE COMMUNE",
     "VIE COMMUNE.+",
@@ -158,8 +159,8 @@ def get_revenus(curr, month):
             LEFT JOIN transaction as trac on Upper(trac.label) LIKE CONCAT('%',  Upper(budget.label), '%')
             WHERE (trac.id IS NULL OR date_format(Date,'%Y-%m') <> '{month}')
 		        AND (budget.type = 'Income' OR budget.type IS NULL) 
-                AND ( start IS NULL OR date_format(start,'%Y-%m') <= {month})
-                AND ( end IS NULL OR (date_format(end,'%Y-%m') >= {month}))
+                AND ( start IS NULL OR date_format(start,'%Y-%m') <= '{month}')
+                AND ( end IS NULL OR (date_format(end,'%Y-%m') >= '{month}'))
         )a
         GROUP BY budget_label
     """

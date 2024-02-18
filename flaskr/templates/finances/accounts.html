@@ -40,7 +40,13 @@
     <div class="card-header py-3">
       <h6 class="m-0 font-weight-bold text-primary">Transactions</h6>
     </div>
-    {{render_table(transactions, ["Date", "Category", "Amount", "Label", "Type"], total, length, curr_page)}}
+    {{render_table(transactions, [
+      {"name" :"Date"},
+      {"name" :"Category"},
+      {"name" :"Amount"},
+      {"name" :"Label"},
+      {"name" :"Type"},
+  ], total, length, curr_page)}}
   </div>
 </div>
 
