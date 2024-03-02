@@ -258,7 +258,12 @@ def refresh():
                     """,
                     [
                         (
-                            tra.id,
+                            hash_id(tra.label) % 12345678
+                            + hash_id(tra.date.strftime("%Y-%m-%d %H:%M:%S"))
+                            % 213054
+                            + hash_id(str(tra.amount)) % 65430
+                            if tra.id == ""
+                            else tra.id,
                             tra.category,
                             (
                                 tra.date.strftime("%Y-%m-%d %H:%M:%S")

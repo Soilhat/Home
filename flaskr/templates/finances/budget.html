@@ -6,111 +6,180 @@
 {% endblock %}
 
 {% macro need_real_higher_than_budget(cell, row) -%}
-    {% if cell <= row["budget"]%}
-        {{cell}}
-    {% else %}
-        <div class="text-danger">{{cell}}</div>
+{% if cell <= row["budget"]%} {{cell}} {% else %} <div class="text-danger">{{cell}}</div>
     {% endif %}
-{%- endmacro%}
+    {%- endmacro%}
 
-{% block content %}
+    {% block content %}
 
-<h2 class="h4">
-    <input type="month" value="{{month}}" class="form-control bg-light border-0" style="font-size: inherit;width: inherit;" onchange="changeMonth()" id="monthPicker">
-</h2>
+    <h2 class="h4">
+        <input type="month" value="{{month}}" class="form-control bg-light border-0"
+            style="font-size: inherit;width: inherit;" onchange="changeMonth()" id="monthPicker">
+    </h2>
 
-<div class="row">
-<div class="col-xl-6">
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Revenus</h6>
-        </div>
-        {{render_table(revenus, [{"name" :"Label"}, {"name" :"Date"}, {"name" :"Real"}, {"name" :"Budget"}])}}
-    </div>
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Budget Summary</h6>
-        </div>
-        {{render_table(summary, [{"name" :"Type"}, {"name" :"%"}, {"name" :"Budget"}, {"name" :"Real", "compare":2}])}}
-    </div>
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Variables</h6>
-        </div>
-        {{ render_table(
-            variables,
-            [
+    <div class="row">
+        <div class="col-xl-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Revenus</h6>
+                </div>
+                {{render_table(revenus, [{"name" :"Label"}, {"name" :"Date"}, {"name" :"Real"}, {"name" :"Budget"}])}}
+            </div>
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Budget Summary</h6>
+                </div>
+                {{render_table(summary, [{"name" :"Type"}, {"name" :"%"}, {"name" :"Budget"}, {"name" :"Real",
+                "compare":2}])}}
+            </div>
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Variables</h6>
+                </div>
+                {{ render_table(
+                variables,
+                [
                 {"name" :"Label"},
                 {"name" :"Budget"},
                 {"name" :"Real", "compare":1},
                 {
-                    "name":"Remaining",
-                    "type": "custom_css",
-                    "callback": format_remaining
+                "name":"Remaining",
+                "type": "custom_css",
+                "callback": format_remaining
                 },
                 {"name" :"Type"}
-            ]
-        ) }}
-    </div>
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Fixed</h6>
+                ]
+                ) }}
+            </div>
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Fixed</h6>
+                </div>
+                {{render_table(fixed, [{"name" :"Label"}, {"name": "Date"}, {"name" :"Budget"}, {"name" :"Real",
+                "compare":2}, {"name" :"Type"}])}}
+            </div>
         </div>
-        {{render_table(fixed, [{"name" :"Label"}, {"name": "Date"}, {"name" :"Budget"}, {"name" :"Real", "compare":2}, {"name" :"Type"}])}}
-    </div>
-</div>
 
-<div class="col-xl-6">
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Expenses</h6>
-        </div>
-        {{render_table(
-            expenses,
-            [
+        <div class="col-xl-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Expenses</h6>
+                </div>
+                {{render_table(
+                expenses,
+                [
                 {"name":"id", "type":"hide"},
                 {"name" :"Label"},
                 {"name" :"Bank"},
                 {"name" :"Date"},
                 {"name" :"Amount"},
                 {
-                    "name" :"Budget",
-                    "type": "select",
-                    "options": spendings,
-                    "onchange":"'update_budget($id)'",
-                    "index":"id"
+                "name" :"Budget",
+                "type": "select",
+                "options": spendings,
+                "onchange":"'update_budget($id)'",
+                "index":"id", "type_except_row":(expenses|length)-1
+                },
+                {
+                "name" :"Edit",
+                "type" : "button",
+                "onclick":"'show_trac($id)'",
+                "target":"editTracModal",
+                "index":"id", "type_except_row":(expenses|length)-1
                 }
-            ]
-        )}}
+                ]
+                )}}
+            </div>
+        </div>
+        <div class="modal fade" id="editTrac" tabindex="-1" role="dialog" aria-labelledby="LabelEditTrac"
+            aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"></h5>
+                        <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">Placeholder</div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+                        <a class="btn btn-primary" href="{{ url_for('auth.logout') }}">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
-</div>
-<script>
-  function changeMonth() {
-    var input = document.getElementById('monthPicker');
-    var url = new URL(window.location.toString())
-    var search_params = url.searchParams;
-    search_params.set('month', input.value);
+    <script>
+        function changeMonth() {
+            var input = document.getElementById('monthPicker');
+            var url = new URL(window.location.toString())
+            var search_params = url.searchParams;
+            search_params.set('month', input.value);
 
-    // change the search property of the main url
-    url.search = search_params.toString();
+            // change the search property of the main url
+            url.search = search_params.toString();
 
-    // the new url string
-    window.location = url.toString()
-  }
-  function update_budget(index) {
-    var e = document.getElementById(index);
-    console.log(e.options[e.selectedIndex].text)
-    value = e.options[e.selectedIndex].text
-    header = {
-        'Content-type':'application/json', 
-        'Accept':'application/json'
-    }
-    fetch("/transac/"+index, {
-      method: "POST",
-      headers:header,
-      body: JSON.stringify(value)
-    })
-  }
-</script>
-{% endblock %}
+            // the new url string
+            window.location = url.toString()
+        }
+        function show_trac(id) {
+            const response = fetch(`/trac/${id}`)
+                .then(response => response.text())
+                .then(text => {
+                    document.getElementById(`editTrac`).innerHTML = text
+                })
+        }
+        function update_budget(index) {
+            var e = document.getElementById(index);
+            value = e.options[e.selectedIndex].text
+            header = {
+                'Content-type': 'application/json',
+                'Accept': 'application/json'
+            }
+            fetch(`/transac/${index}/budget`, {
+                method: "POST",
+                headers: header,
+                body: JSON.stringify(value)
+            })
+        }
+        function findTotal(trac_id) {
+            let table = document.getElementById(`editTrac${trac_id}`).getElementsByTagName('table')[0];
+            var arr = document.querySelectorAll("[name^=Amount]");
+            var tot = 0;
+
+            for (var i = 0; i < arr.length; i++) {
+                if (parseInt(arr[i].value))
+                    tot += parseInt(arr[i].value);
+            }
+
+            document.getElementById(`editTrac${trac_id}`)
+                .getElementsByTagName('table')[0]
+                .getElementsByTagName('tr')[table.rows.length -1]
+                .getElementsByTagName('td')[1].innerText = tot;
+        }
+        function addTracRow(trac_id) {
+            // Get the table element in which you want to add row
+            let table = document.getElementById(`editTrac${trac_id}`).getElementsByTagName('table')[0];
+
+            // Create a row using the inserRow() method and
+            // specify the index where you want to add the row
+            let index = table.rows.length - 1
+            let row = table.insertRow(index);
+
+            // Create table cells
+            let label = row.insertCell(0);
+            let amount = row.insertCell(1);
+            let budget = row.insertCell(2);
+
+            // Add data to c1 and c2
+            amount.innerHTML = `<input  class=""form-control form-control-user" oninput="findTotal('${trac_id}')" name="Amount${index}" type="number" step=0.01 required autocomplete="off">`
+            label.innerHTML = `<input  class="form-control form-control-user" name="Label${index}" required autocomplete="off">`
+            budget.innerHTML = `<select  name="Budget${index}">\
+                            {% for opt in spendings %}\
+                              <option {% if ""==opt %} selected="selected" {% endif %}>{{ opt }}</option>\
+                            {% endfor %}\
+                          </select>`
+        }
+    </script>
+    {% endblock %}

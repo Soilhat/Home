@@ -38,18 +38,24 @@
                     {% for index in range(row|length) %}
                       {% if "type" not in columns[index] or columns[index].type != "hide" %}
                       <td>
-                        {% if "type" not in columns[index] %}
+                        {% if "type" not in columns[index] or ("type_except_row" in columns[index] and data.index(row) == columns[index].type_except_row) %}
                           {% if "compare" not in columns[index] %}
                             {{ row[index] }}
                           {% else %}
                             <div {% if row[index].replace("€","").replace(",",".")| float>row[columns[index].compare].replace("€","").replace(",",".")| float %}style="color:red"{%else%}style="color:green"{%endif%}>{{ row[index] }}</div>
                           {%endif%}
                         {% elif columns[index].type == "select" %}
-                          <select id="{{get_index(row,columns, index)}}" onchange="trigger_function({{columns[index].onchange}}, [ {% for value in row %} '{{value}}', {% endfor %} ], {{columns}})">
+                          <select name="{{columns[index].name}}{{data.index(row)+1}}" id="{{get_index(row,columns, index)}}" onchange="trigger_function({{columns[index].onchange}}, [ {% for value in row %} '{{value}}', {% endfor %} ], {{columns}})">
                             {% for opt in columns[index].options %}
                               <option {% if row[index]==opt %} selected="selected" {% endif %}>{{ opt }}</option>
                             {% endfor %}
                           </select>
+                          {% elif columns[index].type == "input" %}
+                            <input  class="form-control form-control-user" name="{{columns[index].name}}{{data.index(row)+1}}" autocomplete="off" {%if "input_type" in columns[index]%}type="{{columns[index].input_type}}"{%endif%} {%if row[index]%}value="{{ row[index] }}"{%endif%}>
+                        {% elif columns[index].type == "button" %}
+                          <button class="btn" data-toggle="modal" data-target="#editTrac" id="{{get_index(row,columns, index)}}" onclick="trigger_function({{columns[index].onclick}}, [ {% for value in row %} '{{value}}', {% endfor %} ], {{columns}})">
+                            <i class="fas fa-fw fa-pen"></i>
+                          </button>
                         {% elif columns[index].type == "custom_css" %}
                           <span style="{{columns[index].callback(row, index)}}">{{ row[index] }}</span>
                         {% endif %}

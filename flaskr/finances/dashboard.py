@@ -54,13 +54,16 @@ def index():
             SELECT IFNULL(budget.type, fixed_bud.type) as type, trac.amount, 0 as budget
             FROM transaction as trac
             INNER JOIN account as acc on trac.account=acc.id
-            LEFT OUTER JOIN budget on budget.id = trac.budget_id AND date_format(Date,'%Y-%m') = '{month}'
-            LEFT OUTER JOIN budget as fixed_bud on trac.label LIKE CONCAT('%',fixed_bud.label,'%') AND date_format(Date,'%Y-%m') = '{month}'
+            LEFT OUTER JOIN budget on budget.id = trac.budget_id
+                AND date_format(Date,'%Y-%m') = '{month}'
+            LEFT OUTER JOIN budget as fixed_bud on trac.label LIKE CONCAT('%',fixed_bud.label,'%')
+                AND date_format(Date,'%Y-%m') = '{month}'
             WHERE date_format(Date,'%Y-%m') = '{month}'
                 AND (budget.type <> 'Income' OR budget.type IS NULL)
                 AND trac.amount < 0
                 AND trac.label NOT REGEXP '^{"$|^".join(internal_trac)}$'
                 AND trac.saving_id IS NULL
+                AND trac.parent IS NULL
         UNION ALL
             SELECT budget.type, 0 as 'real_amount', budget.amount as budget
             FROM budget
@@ -92,6 +95,7 @@ def index():
                 AND date BETWEEN 
                     DATE_ADD(LAST_DAY(DATE_ADD(DATE_ADD((SELECT MAX(date) from transaction), INTERVAL -1 YEAR), INTERVAL -2 MONTH)),INTERVAL 1 DAY)
                     AND LAST_DAY(DATE_ADD((SELECT MAX(date) from transaction), INTERVAL -1 MONTH))
+                AND trac.parent IS NULL
             group by year(date),month(date)
             order by year(date),month(date);
         """
@@ -113,6 +117,7 @@ def index():
         WHERE amount > 0
 			AND type = 'TYPE_TRANSFER'
             AND label NOT REGEXP '^{"$|^".join(internal_trac)}$'
+            AND parent IS NULL
             AND date BETWEEN DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -4 MONTH) AND DATE_ADD(DATE_ADD(LAST_DAY((SELECT MAX(date) from transaction)), INTERVAL 1 DAY), INTERVAL -1 MONTH)
         """
     )
