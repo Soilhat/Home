@@ -1,91 +1,100 @@
 {% macro render_table(data, columns, total, length, curr_page, callbacks) -%}
 <div class="card-body p-0">
-    <div class="table-responsive">
-      <div id="dataTable_wrapper" class="dataTables_wrapper dt-bootstrap4">
-        <div class="row">
-          {% if length %}
-          <div class="col-sm-12 col-md-6">
-            <div class="dataTables_length">
-              <label>Show <select id="dataTable_length" name="dataTable_length" aria-controls="dataTable"
-                  class="custom-select custom-select-sm form-control form-control-sm"
-                  onchange="checkSelected()">
-                  <option value="10" {% if length==10 %} selected="selected" {% endif %}>10</option>
-                  <option value="25" {% if length==25 %} selected="selected" {% endif %}>25</option>
-                  <option value="50" {% if length==50 %} selected="selected" {% endif %}>50</option>
-                  <option value="100" {% if length==100 %} selected="selected" {% endif %}>100</option>
-                </select> entries</label>
-            </div>
+  <div class="table-responsive">
+    <div id="dataTable_wrapper" class="dataTables_wrapper dt-bootstrap4">
+      <div class="row">
+        {% if length %}
+        <div class="col-sm-12 col-md-6">
+          <div class="dataTables_length">
+            <label>Show <select id="dataTable_length" name="dataTable_length" aria-controls="dataTable"
+                class="custom-select custom-select-sm form-control form-control-sm" onchange="checkSelected()">
+                <option value="10" {% if length==10 %} selected="selected" {% endif %}>10</option>
+                <option value="25" {% if length==25 %} selected="selected" {% endif %}>25</option>
+                <option value="50" {% if length==50 %} selected="selected" {% endif %}>50</option>
+                <option value="100" {% if length==100 %} selected="selected" {% endif %}>100</option>
+              </select> entries</label>
           </div>
-          {% endif %}
         </div>
-        <div class="row m-0">
-          <div class="col-sm-12 p-0">
-            <table class="table table-bordered dataTable m-0" id="dataTable" width="100%" cellspacing="0" role="grid"
-              aria-describedby="dataTable_info" style="width: 100%;">
-              <thead>
-                <tr>
-                    {% for column in columns %}
-                      {% if "type" not in column or column.type != "hide" %}
-                      <th class="sorting" tabindex="0" aria-controls="dataTable" rowspan="1" colspan="1">{{column.name}}</th>
-                      {% endif %}
-                    {% endfor %}
-                </tr>
-              </thead>
-              <tbody>
-
-                {% for row in data %}
-                <tr>
-                    {% for index in range(row|length) %}
-                      {% if "type" not in columns[index] or columns[index].type != "hide" %}
-                      <td>
-                        {% if "type" not in columns[index] or ("type_except_row" in columns[index] and data.index(row) == columns[index].type_except_row) %}
-                          {% if "compare" not in columns[index] %}
-                            {{ row[index] }}
-                          {% else %}
-                            <div {% if row[index].replace("€","").replace(",",".")| float>row[columns[index].compare].replace("€","").replace(",",".")| float %}style="color:red"{%else%}style="color:green"{%endif%}>{{ row[index] }}</div>
-                          {%endif%}
-                        {% elif columns[index].type == "select" %}
-                          <select name="{{columns[index].name}}{{data.index(row)+1}}" id="{{get_index(row,columns, index)}}" onchange="trigger_function({{columns[index].onchange}}, [ {% for value in row %} '{{value}}', {% endfor %} ], {{columns}})">
-                            {% for opt in columns[index].options %}
-                              <option {% if row[index]==opt %} selected="selected" {% endif %}>{{ opt }}</option>
-                            {% endfor %}
-                          </select>
-                          {% elif columns[index].type == "input" %}
-                            <input  class="form-control form-control-user" name="{{columns[index].name}}{{data.index(row)+1}}" autocomplete="off" {%if "input_type" in columns[index]%}type="{{columns[index].input_type}}"{%endif%} {%if row[index]%}value="{{ row[index] }}"{%endif%}>
-                        {% elif columns[index].type == "button" %}
-                          <button class="btn" data-toggle="modal" data-target="#editTrac" id="{{get_index(row,columns, index)}}" onclick="trigger_function({{columns[index].onclick}}, [ {% for value in row %} '{{value}}', {% endfor %} ], {{columns}})">
-                            <i class="fas fa-fw fa-pen"></i>
-                          </button>
-                        {% elif columns[index].type == "custom_css" %}
-                          <span style="{{columns[index].callback(row, index)}}">{{ row[index] }}</span>
-                        {% endif %}
-                      </td>
-                      {% endif %}
-                    {% endfor %}
-                </tr>
+        {% endif %}
+      </div>
+      <div class="row m-0">
+        <div class="col-sm-12 p-0">
+          <table class="table table-bordered dataTable m-0" id="dataTable" width="100%" cellspacing="0" role="grid"
+            aria-describedby="dataTable_info" style="width: 100%;">
+            <thead>
+              <tr>
+                {% for column in columns %}
+                {% if "type" not in column or column.type != "hide" %}
+                <th class="sorting" tabindex="0" aria-controls="dataTable" rowspan="1" colspan="1">{{column.name}}</th>
+                {% endif %}
                 {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
 
-              </tbody>
-            </table>
-          </div>
+              {% for row in data %}
+              <tr>
+                {% for index in range(row|length) %}
+                {% if "type" not in columns[index] or columns[index].type != "hide" %}
+                <td>
+                  {% if "type" not in columns[index] or ("type_except_row" in columns[index] and data.index(row) ==
+                  columns[index].type_except_row) %}
+                  {% if "compare" not in columns[index] %}
+                  {{ row[index] }}
+                  {% else %}
+                  <div {% if row[index].replace("€","").replace(",",".")| float>
+                    row[columns[index].compare].replace("€","").replace(",",".")| float
+                    %}style="color:var(--red)"{%else%}style="color:green"{%endif%}>{{ row[index] }}</div>
+                  {%endif%}
+                  {% elif columns[index].type == "select" %}
+                  <select name="{{columns[index].name}}{{data.index(row)+1}}" id="Select{{get_index(row,columns, index)}}" aria-label="{{columns[index].name}}{{get_index(row,columns, index)}}"
+                    onchange="trigger_function({{columns[index].onchange}}, [ {% for value in row %} '{{value}}', {% endfor %} ], {{columns}})">
+                    {% for opt in columns[index].options %}
+                    <option {% if row[index]==opt %} selected="selected" {% endif %}>{{ opt }}</option>
+                    {% endfor %}
+                  </select>
+                  {% elif columns[index].type == "input" %}
+                  <input class="form-control form-control-user" name="{{columns[index].name}}{{data.index(row)+1}}"
+                    autocomplete="off" {%if "input_type" in columns[index]%}type="{{columns[index].input_type}}"
+                    {%endif%} {%if row[index]%}value="{{ row[index] }}" {%endif%}>
+                  {% elif columns[index].type == "button" %}
+                  <button class="btn" aria-label="{{columns[index].name}}{{get_index(row,columns, index)}}" data-toggle="modal" data-target="#editTrac" id="{{columns[index].name}}{{get_index(row,columns, index)}}"
+                    onclick="trigger_function({{columns[index].onclick}}, [ {% for value in row %} '{{value}}', {% endfor %} ], {{columns}})">
+                    <i class="fas fa-fw fa-pen"></i>
+                  </button>
+                  {% elif columns[index].type == "custom_css" %}
+                  <span style="{{columns[index].callback(row, index)}}">{{ row[index] }}</span>
+                  {% endif %}
+                </td>
+                {% endif %}
+                {% endfor %}
+              </tr>
+              {% endfor %}
+
+            </tbody>
+          </table>
         </div>
-        <div class="row">
-          {% if curr_page %}
-          <div class="col-sm-12 col-md-3">
-            <div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
-              Showing {{(curr_page-1)*length+1}} to {{(curr_page)*length if (curr_page)*length < total else total}} of {{total}} entries
-            </div>
-          </div> 
+      </div>
+      <div class="row">
+        {% if curr_page %}
+        <div class="col-sm-12 col-md-3">
+          <div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
+            Showing {{(curr_page-1)*length+1}} to {{(curr_page)*length if (curr_page)*length < total else total}} of
+              {{total}} entries </div>
+          </div>
           <div class="col-sm-12 col-md-5">
             <div class="dataTables_paginate paging_simple_numbers" id="dataTable_paginate">
               <ul class="pagination">
-                <li class="paginate_button page-item previous {{'disabled' if curr_page == 1}}" id="dataTable_previous"><button onclick="set_page({{curr_page-1}})"
-                    aria-controls="dataTable" data-dt-idx="0" tabindex="0" class="page-link">Previous</button></li>
-                {% for page in range(ceil(total/length))  %}
-                <li class="paginate_button page-item {{'active' if curr_page == page+1}}"><button onclick="set_page({{page+1}})" aria-controls="dataTable" data-dt-idx="{{page+1}}"
-                    tabindex="0" class="page-link">{{page+1}}</button></li>
+                <li class="paginate_button page-item previous {{'disabled' if curr_page == 1}}" id="dataTable_previous">
+                  <button onclick="set_page({{curr_page-1}})" aria-controls="dataTable" data-dt-idx="0" tabindex="0"
+                    class="page-link">Previous</button></li>
+                {% for page in range(ceil(total/length)) %}
+                <li class="paginate_button page-item {{'active' if curr_page == page+1}}"><button
+                    onclick="set_page({{page+1}})" aria-controls="dataTable" data-dt-idx="{{page+1}}" tabindex="0"
+                    class="page-link">{{page+1}}</button></li>
                 {% endfor %}
-                <li class="paginate_button page-item next {{'disabled' if curr_page == ceil(total/length)}}" id="dataTable_next"><button onclick="set_page({{curr_page+1}})" aria-controls="dataTable"
+                <li class="paginate_button page-item next {{'disabled' if curr_page == ceil(total/length)}}"
+                  id="dataTable_next"><button onclick="set_page({{curr_page+1}})" aria-controls="dataTable"
                     data-dt-idx="{{ceil(total/length)+1}}" tabindex="0" class="page-link">Next</button></li>
               </ul>
             </div>
@@ -102,10 +111,10 @@
       var url = new URL(window.location.toString())
       var search_params = url.searchParams;
       search_params.set('length', option.value);
-  
+
       // change the search property of the main url
       url.search = search_params.toString();
-  
+
       // the new url string
       window.location = url.toString()
     }
@@ -113,18 +122,18 @@
       var url = new URL(window.location.toString())
       var search_params = url.searchParams;
       search_params.set('page', page);
-  
+
       // change the search property of the main url
       url.search = search_params.toString();
-  
+
       // the new url string
       window.location = url.toString()
     }
-    function trigger_function(func_str, row, columns){
+    function trigger_function(func_str, row, columns) {
       for (let index = 0; index < columns.length; index++) {
-        func_str=func_str.replace(`$${columns[index].name}`,row[index].toString());
+        func_str = func_str.replace(`$${columns[index].name}`, row[index].toString());
       }
       eval(func_str)
     }
   </script>
-{%- endmacro%}
+  {%- endmacro%}

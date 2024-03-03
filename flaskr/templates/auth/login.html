@@ -6,10 +6,12 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="">
-  <meta name="author" content="">
+  <meta name="description" content="Log in Personal Finance tool">
+  <meta name="author" content="Soilhat MOHAMED">
+  <meta name="theme-color" content="var(--primary)">
 
   <title>Login</title>
+  <link rel="icon" type="image/png" href="{{url_for('static',filename='heart-nobg.png')}}" />
 
   <!-- Custom fonts for this template-->
   <link href="{{url_for('static',filename='vendor/fontawesome-free/css/all.min.css')}}" rel="stylesheet"
@@ -25,13 +27,13 @@
 </head>
 
 <script>
-  function submit(){
+  function submit() {
     let username = document.getElementById("username").value;
     let password = document.getElementById("password").value;
 
     const response = fetch('/auth/encryption')
-      .then( response => response.text())
-      .then(publicKey =>{
+      .then(response => response.text())
+      .then(publicKey => {
         var encrypt = new JSEncrypt();
         encrypt.setPublicKey(publicKey);
         var encryptedPassword = encrypt.encrypt(password);
@@ -55,7 +57,8 @@
           <div class="card-body p-0">
             <!-- Nested Row within Card Body -->
             <div class="row">
-              <div class="col-lg-6 d-none d-lg-block bg-login-image"></div>
+              <div class="col-lg-6 d-none d-lg-block"><img src="{{url_for('static',filename='img/dog_login-400.jpg')}}"
+                  width="100%" height="100%" alt="dog login img"></div>
               <div class="col-lg-6">
                 <div class="p-5">
                   <div class="text-center">
@@ -71,9 +74,7 @@
                         placeholder="Password">
                     </div>
                   </form>
-                  <button type="submit" onclick="submit()" class="btn btn-primary btn-user btn-block">
-                    Login
-                  </button>
+                  <button type="submit" onclick="submit()" class="btn btn-primary btn-user btn-block">Login</button>
                   <hr>
                   <div class="text-center">
                     <a class="small" href="{{url_for('auth.register')}}">Create an Account!</a>
