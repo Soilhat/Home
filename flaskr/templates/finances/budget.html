@@ -131,7 +131,7 @@
                 })
         }
         function update_budget(index) {
-            var e = document.getElementById(index);
+            var e = document.getElementById(`Select${index}`);
             value = e.options[e.selectedIndex].text
             header = {
                 'Content-type': 'application/json',

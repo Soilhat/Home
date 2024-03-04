@@ -582,4 +582,4 @@ def format_remaining(row, cell_id):
     cell = cell.replace(",", ".")
     if float(cell) > 0:
         return "color:green"
-    return "color:red"
+    return "color:var(--red)"
