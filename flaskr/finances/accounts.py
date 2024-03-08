@@ -43,8 +43,9 @@ def index():
     total = curr.fetchone()[0]
     curr.execute(
         f"""
-        SELECT Date, Category, Amount, Label, Type
-        FROM transaction 
+        SELECT Date, bank, Category, Amount, trac.Label, trac.Type
+        FROM transaction trac
+        JOIN account ON account.id = trac.account
         WHERE YEAR(Date) = {int(month[0:4])} AND MONTH(Date) ={int(month[6:7])}
         ORDER BY date DESC
         LIMIT {length}

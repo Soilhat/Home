@@ -306,9 +306,10 @@ def get_fixed(curr, month):
     """Retrieve Fixed monthly budgeted transactions"""
     month = f"{month}-01"
     query = f"""
-        SELECT budget.label, IFNULL(trac.Date,'') as date, to_currency(budget.amount) as budget, to_currency(abs(sum(trac.amount))) as 'real_amount', budget.type
+        SELECT budget.label, IFNULL(GROUP_CONCAT(bank SEPARATOR ','),''), IFNULL(trac.Date,'') as date, to_currency(budget.amount) as budget, to_currency(abs(sum(trac.amount))) as 'real_amount', budget.type
         FROM budget
         LEFT JOIN transaction as trac on trac.label LIKE CONCAT('%', budget.label ,'%') AND date_format(Date,'%Y-%m') = date_format('{month}','%Y-%m')
+        LEFT OUTER JOIN account on account.id = trac.account
         WHERE  ( start IS NULL OR start <= '{month}')
             AND ( end IS NULL OR end >= '{month}')
             AND budget.fixed = 1
@@ -321,6 +322,7 @@ def get_fixed(curr, month):
             {query}
         UNION ALL
             select 'Total' label,
+                '' as bank,
                 '' as date,
                 to_currency(abs(sum(CAST(REPLACE(REPLACE(budget,'€',''),',','.') as DECIMAL(9,2))))) as budget,
                 to_currency(abs(sum(CAST(REPLACE(REPLACE(real_amount,'€',''),',','.') as DECIMAL(9,2))))) as 'real_amount',
