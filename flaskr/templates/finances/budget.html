@@ -146,17 +146,28 @@
         function findTotal(trac_id) {
             let table = document.getElementById(`editTrac${trac_id}`).getElementsByTagName('table')[0];
             var arr = document.querySelectorAll("[name^=Amount]");
+            var save_button = document.getElementById("Save_button");
             var tot = 0;
 
             for (var i = 0; i < arr.length; i++) {
-                if (parseInt(arr[i].value))
-                    tot += parseInt(arr[i].value);
+                if (parseFloat(arr[i].value))
+                    tot += parseFloat(arr[i].value);
             }
 
-            document.getElementById(`editTrac${trac_id}`)
+            var element = document.getElementById(`editTrac${trac_id}`)
                 .getElementsByTagName('table')[0]
                 .getElementsByTagName('tr')[table.rows.length -1]
-                .getElementsByTagName('td')[1].innerText = tot;
+                .getElementsByTagName('td')[1];
+                
+            element.innerText = tot+'€';
+            if (tot != parseFloat(document.getElementById(`TotalAmount`).innerText.replace('€','').replace(',','.'))){
+                element.style.color = "var(--red)";
+                save_button.disabled = true;
+            }
+            else{
+                element.style.color = ""
+                save_button.disabled = false;
+            }
         }
         function addTracRow(trac_id) {
             // Get the table element in which you want to add row

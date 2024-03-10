@@ -11,7 +11,7 @@
       <div class="modal-body">
         <div class="row">
           <div class="col-auto"><b>Bank</b> : {{item[1]}}</div>
-          <div class="col-auto"><b>Total Amount</b> : {{item[2]}}</div>
+          <div class="col-auto"><b>Total Amount</b> : <span id="TotalAmount">{{item[2]}}</span></div>
           <div class="col-auto"><b>Date</b> : {{item[3]}}</div>
           <div class="col-auto"><b>Label</b> : {{item[4]}}</div>
           {%if item[5]%}<div class="col"><b>Budget</b> : {{item[5]}}</div>{%endif%}
@@ -44,6 +44,7 @@
               "type":"input",
               "input_type":"number",
               "input_step":"0.01",
+              "input_max": item[2],
               "index":"id", "oninput":"findTotal(trac_id)", "type_except_row":(transac|length)-1},
               {
               "name" :"Budget",
@@ -59,7 +60,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-        <button class="btn btn-primary" type="submit">Save</button>
+        <button class="btn btn-primary" type="submit" id="Save_button">Save</button>
       </div>
     </form>
   </div>

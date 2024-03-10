@@ -54,9 +54,15 @@
                     {% endfor %}
                   </select>
                   {% elif columns[index].type == "input" %}
-                  <input class="form-control form-control-user" name="{{columns[index].name}}{{data.index(row)+1}}"
-                    autocomplete="off" {%if "input_type" in columns[index]%}type="{{columns[index].input_type}}"
-                    {%endif%} {%if row[index]%}value="{{ row[index] }}" {%endif%}>
+                  <input 
+                    class="form-control form-control-user"
+                    name="{{columns[index].name}}{{data.index(row)+1}}"
+                    autocomplete="off"
+                    {%if "input_type" in columns[index]%}type="{{columns[index].input_type}}"{%endif%}
+                    {%if row[index]%}value="{{ row[index] }}" {%endif%}
+                    {%if "input_max" in columns[index]%}max="{{columns[index].input_max}}"{%endif%}
+                    {%if "input_min" in columns[index]%}min="{{columns[index].input_min}}"{%endif%}
+                  >
                   {% elif columns[index].type == "button" %}
                   <button class="btn" aria-label="{{columns[index].name}}{{get_index(row,columns, index)}}" data-toggle="modal" data-target="#editTrac" id="{{columns[index].name}}{{get_index(row,columns, index)}}"
                     onclick="trigger_function({{columns[index].onclick}}, [ {% for value in row %} '{{value}}', {% endfor %} ], {{columns}})">
