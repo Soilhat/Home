@@ -2,6 +2,7 @@ import os
 import hashlib
 from datetime import datetime
 from math import ceil
+import traceback
 
 from flask import Blueprint, current_app, render_template, request
 from woob.capabilities.bank.base import Account, Loan, Transaction
@@ -124,7 +125,11 @@ def refresh():
         woob = Woob()
         print(f"Processing {bank['module_name']}")
         woob.load_backend(bank["module_name"], bank["name"], params=bank["params"])
-        accounts: list[Account] = list(woob.iter_accounts())
+        try:
+            accounts: list[Account] = list(woob.iter_accounts())
+        except Exception:
+            traceback.print_exc()
+            continue
 
         loans = [x for x in accounts if isinstance(x, Loan)]
 
