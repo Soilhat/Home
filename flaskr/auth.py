@@ -1,28 +1,19 @@
 """The authentication blueprint has views to register new users and to log in and log out."""
 
-import functools
-
-from flask import (
-    Blueprint,
-    flash,
-    g,
-    redirect,
-    render_template,
-    request,
-    session,
-    url_for,
-)
-from werkzeug.security import check_password_hash, generate_password_hash
-from mysql.connector.errors import IntegrityError
-
-from flaskr.db import get_db
-
-from hashlib import sha256
-import rsa
 import base64
+import functools
+from hashlib import sha256
 
+import rsa
+from flask import (Blueprint, flash, g, redirect, render_template, request,
+                   session, url_for)
+from mysql.connector.errors import IntegrityError
+from werkzeug.security import check_password_hash, generate_password_hash
+
+from flaskr.db import get_user_db
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
+
 
 class EncryptionKey:
     _publicKey = None
@@ -42,11 +33,15 @@ class EncryptionKey:
 
     def isAuthorizedToGenerateNewKey(self):
         return True
-    
+
     def decrypt(self, message):
-        return (rsa.decrypt(base64.b64decode(message), self._privateKey)).decode("utf-8") 
+        return (rsa.decrypt(base64.b64decode(message), self._privateKey)).decode(
+            "utf-8"
+        )
+
 
 g_registeredEncryptionKeys = []
+
 
 @bp.route("/register", methods=("GET", "POST"))
 def register():
@@ -58,7 +53,8 @@ def register():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-        curr, conn = get_db()
+        conn = get_user_db()
+        curr = conn.cursor()
         error = None
 
         if not username:
@@ -70,7 +66,7 @@ def register():
             try:
                 curr.execute(
                     "INSERT INTO user (username, password) VALUES (%s, %s)",
-                    (username, generate_password_hash(password)),
+                    (username, generate_password_hash(password,method='pbkdf2')),
                 )
                 conn.commit()
             except IntegrityError:
@@ -84,24 +80,25 @@ def register():
 
 @bp.route("/encryption")
 def generateEncryptionKeys():
-    hashedCurrentIP = (sha256(request.remote_addr.encode('utf-8')).hexdigest())
+    hashedCurrentIP = sha256(request.remote_addr.encode("utf-8")).hexdigest()
 
     global g_registeredEncryptionKeys
     encryptionKey = None
     for registeredKey in g_registeredEncryptionKeys:
-        if (registeredKey.isEqual(hashedCurrentIP)):
-            if (registeredKey.isAuthorizedToGenerateNewKey() == False):
-                return ""  
+        if registeredKey.isEqual(hashedCurrentIP):
+            if registeredKey.isAuthorizedToGenerateNewKey() == False:
+                return ""
             else:
                 encryptionKey = registeredKey
-     
+
     if encryptionKey == None:
-        g_registeredEncryptionKeys.append(EncryptionKey(hashedCurrentIP))   
+        g_registeredEncryptionKeys.append(EncryptionKey(hashedCurrentIP))
         encryptionKey = g_registeredEncryptionKeys[-1]
 
     encryptionKey.generateKeys()
 
     return base64.b64encode(encryptionKey._publicKey._save_pkcs1_der())
+
 
 @bp.route("/login", methods=("GET", "POST"))
 def login():
@@ -112,16 +109,17 @@ def login():
     or the validation succeeds, the user's id is stored in a new session
     and redirect to index page."""
     if request.method == "POST":
-        curr = get_db()[0]
+        conn = get_user_db()
+        curr = conn.cursor()
         error = None
 
         username = request.form["username"]
-        hashedCurrentIP = (sha256(request.remote_addr.encode('utf-8')).hexdigest())
+        hashedCurrentIP = sha256(request.remote_addr.encode("utf-8")).hexdigest()
         encryptedPassword = request.form["password"]
         password = ""
         global g_registeredEncryptionKeys
         for registeredKey in g_registeredEncryptionKeys:
-            if (registeredKey.isEqual(hashedCurrentIP)):
+            if registeredKey.isEqual(hashedCurrentIP):
                 password = registeredKey.decrypt(encryptedPassword)
 
         if password == "":
@@ -158,7 +156,8 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        curr = get_db()[0]
+        conn = get_user_db()
+        curr = conn.cursor()
         curr.execute("SELECT * FROM user WHERE id = %s", (user_id,))
         g.user = curr.fetchone()
 

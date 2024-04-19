@@ -178,3 +178,4 @@ cython_debug/
 config.py
 
 refreshed_date.txt
+databases/*.db

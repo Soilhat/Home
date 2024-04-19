@@ -1,0 +1,99 @@
+{% extends 'params.html' %}
+{% from "components/table.html" import render_table with context %}
+
+{% block content %}
+<form method="post" action="{{ url_for('params.finances' ) }}">
+    <div class="row">
+        <div class="col">
+            <h4>Banks</h4>
+            <button class="btn" type="button" onclick="addBankRow()">
+                <i class="fas fa-fw fa-plus"></i>
+            </button>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="card shadow mb-4" id="banks">
+                {{render_table(
+                banks,
+                [
+                {"name":"login", "type":"input"},
+                {
+                    "name" :"module",
+                    "type": "select",
+                    "options": avail_banks,
+                    },
+                {"name":"name", "type":"input"},
+                {"name":"password", "type":"input", "input_type":"password"},
+                {"name":"website", "type":"hide"},
+                {"name":"delete",
+                "type" : "button",
+                "onclick":"'deleteBankModal($login)'",
+                "index":"login",
+                }
+                ]
+                )}}
+            </div>
+        </div>
+    </div>
+    <button class="btn btn-primary" type="submit" id="Save_button">Save</button>
+</form>
+
+<div class="modal fade" id="editTrac" tabindex="-1" role="dialog" aria-labelledby="LabelEditTrac"
+aria-hidden="true">
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="h5 modal-title">Delete Bank</h3>
+            <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">×</span>
+            </button>
+        </div>
+        <div class="modal-body" id="deleteBankBody">DELETE BANK</div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+            <a class="btn btn-danger" id="deleteBankAction"  type="button"  data-dismiss="modal" onclick=deleteBank()>DELETE</a>
+        </div>
+    </div>
+</div>
+</div>
+<script>
+
+    function addBankRow() {
+        // Get the table element in which you want to add row
+        let table = document.getElementById(`banks`).getElementsByTagName('table')[0];
+
+        // Create a row using the inserRow() method and
+        // specify the index where you want to add the row
+        let index = table.rows.length
+        let row = table.insertRow(index);
+
+        // Create table cells
+        let login = row.insertCell(0).innerHTML = `<input  class="form-control form-control-user" name="login${index}" required autocomplete="off">`;
+        let module = row.insertCell(1).innerHTML = `<select name="module${index}">
+                {% for opt in avail_banks %}
+                    <option>{{ opt }}</option>
+                {% endfor %}
+            </select>`;
+        let name = row.insertCell(2).innerHTML = `<input  class="form-control form-control-user" name="name${index}" required autocomplete="off">`;
+        let password = row.insertCell(3).innerHTML = `<input  class="form-control form-control-user" name="password${index}" type="password" required autocomplete="off">`;
+
+    }
+
+    function deleteBankModal(login) {
+        document.getElementById(`deleteBankBody`).innerHTML = `Are you sure you want to delete bank with login : ${login}`
+        document.getElementById(`deleteBankAction`).onclick = function(evenObjectIsPassedHere){ deleteBank.call(this,login)}       
+    }
+
+    function deleteBank(login) {
+        header = {
+            'Content-type': 'application/json',
+            'Accept': 'application/json'
+        }
+        fetch(`/bank/${login}`, {
+            method: "DELETE",
+            headers: header,
+        }).then(response => location.reload())
+    }
+</script>
+{% endblock %}

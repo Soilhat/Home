@@ -40,11 +40,11 @@
                   {% if "type" not in columns[index] or ("type_except_row" in columns[index] and data.index(row) ==
                   columns[index].type_except_row) %}
                   {% if "compare" not in columns[index] %}
-                  {{ row[index] }}
+                  {%if row[index]|float %}{{'%0.2f'| format(row[index])}}{%else%}{{ row[index] }}{%endif%}{%if "suffix" in columns[index] and row[index] != ''%}{{ columns[index].suffix }}{%endif%}
                   {% else %}
-                  <div {% if row[index].replace("€","").replace(",",".")| float>
-                    row[columns[index].compare].replace("€","").replace(",",".")| float
-                    %}style="color:var(--red)"{%else%}style="color:green"{%endif%}>{{ row[index] }}</div>
+                  <div {% if row[index]| float>
+                    row[columns[index].compare]| float
+                    %}style="color:var(--red)"{%else%}style="color:green"{%endif%}>{%if row[index]|float %}{{'%0.2f'| format(row[index])}}{%else%}{{ row[index] }}{%endif%}{%if "suffix" in columns[index]%}{{ columns[index].suffix }}{%endif%}</div>
                   {%endif%}
                   {% elif columns[index].type == "select" %}
                   <select name="{{columns[index].name}}{{data.index(row)+1}}" id="Select{{get_index(row,columns, index)}}" aria-label="{{columns[index].name}}{{get_index(row,columns, index)}}"
@@ -64,12 +64,12 @@
                     {%if "input_min" in columns[index]%}min="{{columns[index].input_min}}"{%endif%}
                   >
                   {% elif columns[index].type == "button" %}
-                  <button class="btn" aria-label="{{columns[index].name}}{{get_index(row,columns, index)}}" data-toggle="modal" data-target="#editTrac" id="{{columns[index].name}}{{get_index(row,columns, index)}}"
+                  <button type="button" class="btn" aria-label="{{columns[index].name}}{{get_index(row,columns, index)}}" data-toggle="modal" data-target="#editTrac" id="{{columns[index].name}}{{get_index(row,columns, index)}}"
                     onclick="trigger_function({{columns[index].onclick}}, [ {% for value in row %} '{{value}}', {% endfor %} ], {{columns}})">
                     <i class="fas fa-fw fa-pen"></i>
                   </button>
                   {% elif columns[index].type == "custom_css" %}
-                  <span style="{{columns[index].callback(row, index)}}">{{ row[index] }}</span>
+                  <span style="{{columns[index].callback(row, index)}}">{%if row[index]|float %}{{'%0.2f'| format(row[index])}}{%else%}{{ row[index] }}{%endif%}{%if "suffix" in columns[index] and row[index] != ''%}{{ columns[index].suffix }}{%endif%}</span>
                   {% endif %}
                 </td>
                 {% endif %}

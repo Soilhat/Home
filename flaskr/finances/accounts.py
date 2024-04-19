@@ -1,17 +1,18 @@
-import os
 import hashlib
+import traceback
 from datetime import datetime
 from math import ceil
 
-from flask import Blueprint, current_app, render_template, request
+from flask import Blueprint, render_template, request, session
 from woob.capabilities.bank.base import Account, Loan, Transaction
-from woob.capabilities.base import NotLoadedType
+from woob.capabilities.base import NotLoadedType, NotAvailableType
 from woob.core import Woob
 from woob.core.bcall import CallErrors
 from woob.exceptions import BrowserUnavailable
 
 from flaskr.auth import login_required
-from flaskr.db import executemany, get_db
+from flaskr.db import executemany, get_db, get_user_db
+from flaskr.finances.bank import get_banks
 
 bp = Blueprint("accounts", __name__)
 
@@ -32,26 +33,29 @@ def index():
         types[account[3]].append(account)
     if month is None:
         curr.execute(
-            "SELECT date_format(Date,'%Y-%m') FROM transaction ORDER BY Date DESC LIMIT 1"
+            "SELECT strftime('%Y-%m',Date) as date FROM 'transaction' ORDER BY Date DESC LIMIT 1"
         )
-        month = curr.fetchone()[0]
+        month: dict = curr.fetchone()
+        if month is None:
+            month = datetime.today().strftime("%Y-%m")
+        else:
+            month = month[0]
     curr.execute(
         f"""SELECT COUNT(*)
-        FROM transaction
-        WHERE YEAR(Date) = {int(month[0:4])} AND MONTH(Date) ={int(month[6:7])}"""
+        FROM 'transaction'
+        WHERE strftime('%Y-%m',Date) = '{month}'"""
     )
     total = curr.fetchone()[0]
-    curr.execute(
-        f"""
-        SELECT Date, bank, Category, Amount, trac.Label, trac.Type
-        FROM transaction trac
+    query = f"""
+        SELECT strftime('%Y-%m-%d',Date), bank, Category, Amount, trac.Label, trac.Type
+        FROM 'transaction' trac
         JOIN account ON account.id = trac.account
-        WHERE YEAR(Date) = {int(month[0:4])} AND MONTH(Date) ={int(month[6:7])}
+        WHERE strftime('%Y-%m',Date) = '{month}'
         ORDER BY date DESC
         LIMIT {length}
         OFFSET {(curr_page-1)*length}
     """
-    )
+    curr.execute(query)
     transactions = curr.fetchall()
     return render_template(
         "finances/accounts.html",
@@ -70,7 +74,7 @@ def index():
 def transaction(acc_id):
     """Query all transactions for a specific account"""
     curr = get_db()[0]
-    curr.execute("SELECT * FROM transaction WHERE account=%s", acc_id)
+    curr.execute("SELECT * FROM 'transaction' WHERE account=?", acc_id)
     transactions = curr.fetchall()
     return render_template("finances/transactions.html", transactions=transactions)
 
@@ -86,45 +90,33 @@ def refresh():
     """Refresh all accounts history"""
     banks = [
         {
-            "module_name": "bnp",
-            "name": "bnp",
+            "module_name": bank[1],
+            "name": bank[2],
             "params": {
-                "login": current_app.config["BNP_LOGIN"],
-                "password": current_app.config["BNP_PASSWORD"],
+                "login": bank[0],
+                "password": bank[3],
+                "website": bank[4],
             },
-        },
-        {
-            "module_name": "hellobank",
-            "name": "hb",
-            "params": {
-                "login": current_app.config["HB_LOGIN"],
-                "password": current_app.config["HB_PASSWORD"],
-            },
-        },
-        {
-            "module_name": "bp",
-            "name": "bp",
-            "params": {
-                "login": current_app.config["BP_LOGIN"],
-                "password": current_app.config["BP_PASSWORD"],
-            },
-        },
-        {
-            "module_name": "cragr",
-            "name": "ca",
-            "params": {
-                "login": current_app.config["CA_LOGIN"],
-                "password": current_app.config["CA_PASSWORD"],
-                "website": "www.ca-paris.fr",
-            },
-        },
+        }
+        for bank in get_banks(case_module=False)
     ]
-
     for bank in banks:
         woob = Woob()
         print(f"Processing {bank['module_name']}")
-        woob.load_backend(bank["module_name"], bank["name"], params=bank["params"])
-        accounts: list[Account] = list(woob.iter_accounts())
+        try:
+            woob.load_backend(
+                bank["module_name"],
+                bank["name"],
+                params={
+                    key: value
+                    for key, value in bank["params"].items()
+                    if value is not None
+                },
+            )
+            accounts: list[Account] = list(woob.iter_accounts())
+        except Exception:
+            traceback.print_exc()
+            continue
 
         loans = [x for x in accounts if isinstance(x, Loan)]
 
@@ -162,8 +154,8 @@ def refresh():
                     account.backend,
                     account.label,
                     account_type[account.type],
-                    account.balance,
-                    account.coming,
+                    conv_float(account.balance),
+                    conv_float(account.coming),
                     account.iban,
                     account.number,
                 )
@@ -171,14 +163,10 @@ def refresh():
             ]
             executemany(
                 """
-                INSERT INTO account 
+                REPLACE INTO account 
                     (id, bank, label, type, balance, coming, iban, number)
                 VALUES 
-                    (%s, %s, %s, %s, %s, %s, %s, %s) 
-                ON DUPLICATE KEY UPDATE 
-                    type     = VALUES(type),
-                    balance  = VALUES(balance), 
-                    coming   = VALUES(coming) ;
+                    (?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 records,
             )
@@ -189,34 +177,25 @@ def refresh():
             records = [
                 (
                     loan.id,
-                    loan.duration,
-                    loan.insurance_amount,
-                    loan.maturity_date.strftime("%Y-%m-%d %H:%M:%S"),
-                    loan.nb_payments_left,
-                    loan.next_payment_amount,
-                    loan.next_payment_date.strftime("%Y-%m-%d %H:%M:%S"),
-                    loan.rate,
-                    loan.total_amount,
+                    conv_float(loan.duration),
+                    conv_float(loan.insurance_amount),
+                    conv_date(loan.maturity_date),
+                    conv_float(loan.nb_payments_left),
+                    conv_float(loan.next_payment_amount),
+                    conv_date(loan.next_payment_date),
+                    conv_float(loan.rate),
+                    conv_float(loan.total_amount),
                 )
                 for loan in loans
             ]
             executemany(
                 """
-                INSERT INTO loan 
+                REPLACE INTO loan 
                     (id, duration, insurance_amount,
                     maturity_date, nb_payments_left, next_payment_amount,
                     next_payment_date, rate, total_amount)
                 VALUES 
-                    (%s, %s, %s, %s, %s, %s, %s, %s, %s) 
-                ON DUPLICATE KEY UPDATE 
-                    duration  = VALUES(duration), 
-                    insurance_amount  = VALUES(insurance_amount),
-                    maturity_date  = VALUES(maturity_date),
-                    nb_payments_left  = VALUES(nb_payments_left),
-                    next_payment_amount  = VALUES(next_payment_amount),
-                    next_payment_date  = VALUES(next_payment_date),
-                    rate  = VALUES(rate),
-                    total_amount  = VALUES(total_amount);
+                    (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 records,
             )
@@ -225,9 +204,7 @@ def refresh():
             print(f"Processing transactions : {account.label}")
             try:
                 transactions: list[Transaction] = list(woob.iter_history(account))
-                coming_transactions: list[Transaction] = list(
-                    woob.iter_coming(account)
-                )
+                coming_transactions: list[Transaction] = list(woob.iter_coming(account))
             except (BrowserUnavailable, CallErrors) as exc:
                 print(f"{exc.errors}")
                 print(f"{account.backend} Browser Unavailable")
@@ -253,38 +230,39 @@ def refresh():
 
                 executemany(
                     """
-                        UPDATE transaction
-                        SET id = %s,category = %s, date = %s, type = %s, value_date = %s, real_date = %s, coming = 0, transaction.label = %s
-                        WHERE transaction.account = %s AND transaction.amount = %s AND transaction.coming = 1
+                        UPDATE 'transaction'
+                        SET id = ?, category = ?, date = ?, type = ?, 
+                            value_date = ?, real_date = ?, coming = 0, label = ?
+                        WHERE id <> ? AND account = ? AND amount = ? AND coming = 1 
+                            AND ? BETWEEN DATE(date, '-7 days') AND DATE(date, '7 days')
                     """,
                     [
                         (
-                            hash_id(tra.label) % 12345678
-                            + hash_id(tra.date.strftime("%Y-%m-%d %H:%M:%S"))
-                            % 213054
-                            + hash_id(str(tra.amount)) % 65430
-                            if tra.id == ""
-                            else tra.id,
+                            (
+                                hash_id(tra.label) % 12345678
+                                + hash_id(tra.date.strftime("%Y-%m-%d %H:%M:%S"))
+                                % 213054
+                                + hash_id(str(tra.amount)) % 65430
+                                if tra.id == ""
+                                else tra.id
+                            ),
                             tra.category,
-                            (
-                                tra.date.strftime("%Y-%m-%d %H:%M:%S")
-                                if not isinstance(tra.date, NotLoadedType)
-                                else None
-                            ),
+                            conv_date(tra.date),
                             tr_type[tra.type],
-                            (
-                                tra.vdate.strftime("%Y-%m-%d %H:%M:%S")
-                                if not isinstance(tra.vdate, NotLoadedType)
-                                else None
-                            ),
-                            (
-                                tra.rdate.strftime("%Y-%m-%d %H:%M:%S")
-                                if not isinstance(tra.rdate, NotLoadedType)
-                                else None
-                            ),
+                            conv_date(tra.vdate),
+                            conv_date(tra.rdate),
                             tra.label,
+                            (
+                                hash_id(tra.label) % 12345678
+                                + hash_id(tra.date.strftime("%Y-%m-%d %H:%M:%S"))
+                                % 213054
+                                + hash_id(str(tra.amount)) % 65430
+                                if tra.id == ""
+                                else tra.id
+                            ),
                             account.id,
-                            tra.amount,
+                            conv_float(tra.amount),
+                            conv_date(tra.date),
                         )
                         for tra in transactions
                     ],
@@ -301,38 +279,24 @@ def refresh():
                             else transaction.id
                         ),
                         account.id,
-                        transaction.amount,
+                        conv_float(transaction.amount),
                         transaction.category,
-                        (
-                            transaction.date.strftime("%Y-%m-%d %H:%M:%S")
-                            if not isinstance(transaction.date, NotLoadedType)
-                            else None
-                        ),
+                        conv_date(transaction.date),
                         transaction.label,
                         tr_type[transaction.type],
-                        (
-                            transaction.rdate.strftime("%Y-%m-%d %H:%M:%S")
-                            if not isinstance(transaction.rdate, NotLoadedType)
-                            else None
-                        ),
-                        (
-                            transaction.vdate.strftime("%Y-%m-%d %H:%M:%S")
-                            if not isinstance(transaction.vdate, NotLoadedType)
-                            else None
-                        ),
+                        conv_date(transaction.rdate),
+                        conv_date(transaction.vdate),
                     )
                     for transaction in transactions
                 ]
                 executemany(
                     """
-                        INSERT INTO transaction 
+                        INSERT OR IGNORE INTO 'transaction' 
                             (id, account, amount,
                             category, date, label,
                             type, real_date, value_date)
                         VALUES 
-                            (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON DUPLICATE KEY UPDATE
-                            id   =  VALUES(id)
+                            (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     records,
                 )
@@ -349,39 +313,83 @@ def refresh():
                             else transaction.id
                         ),
                         account.id,
-                        transaction.amount,
-                        (
-                            transaction.date.strftime("%Y-%m-%d %H:%M:%S")
-                            if not isinstance(transaction.date, NotLoadedType)
-                            else None
-                        ),
+                        conv_float(transaction.amount),
+                        (conv_date(transaction.date)),
                         transaction.label.replace("FACTURE CARTE ", ""),
                     )
-                    for transaction in coming_transactions if transaction.label
+                    for transaction in coming_transactions
+                    if transaction.label
                 ]
                 if records:
                     print(f"Adding {len(records)} coming transactions")
                     executemany(
                         """
-                            INSERT INTO transaction 
+                            INSERT or IGNORE INTO 'transaction' 
                                 (id, account, amount, date, label, coming)
                             VALUES 
-                                (%s, %s, %s, %s, %s, 1)
-                            ON DUPLICATE KEY UPDATE
-                                coming = 1
+                                (?, ?, ?, ?, ?, 1)
                         """,
                         records,
                     )
-    with open("refreshed_date.txt", "w", encoding="utf-8") as file:
-        file.write(datetime.today().strftime("%Y-%m-%d"))
+
+    check_internal()
+    conn = get_user_db()
+    curr = conn.cursor()
+    curr.execute(f"""UPDATE user SET refreshed=NOW() WHERE id={session["user_id"]}""")
+    conn.commit()
     return "refreshed"
 
 @bp.route("/accounts/refresh_date")
 @login_required
 def refresh_date():
-    date = "unknown"
-    path = "refreshed_date.txt"
-    if os.path.isfile(path):
-        with open(path, "r", encoding="utf-8") as file:
-            date = file.read()
-    return date
+    conn = get_user_db()
+    curr = conn.cursor()
+    curr.execute(f"""SELECT refreshed FROM user WHERE id={session["user_id"]}""")
+    date = curr.fetchone()[0]
+    if date is None:
+        return "unknown"
+    return date.strftime("%Y-%m-%d")
+
+
+def conv_float(value):
+    return float(value) if (not isinstance(value, NotLoadedType)) and (not isinstance(value,NotAvailableType)) else None
+
+
+def conv_date(value):
+    return (
+        value.strftime("%Y-%m-%d %H:%M:%S")
+        if not isinstance(value, NotLoadedType)
+        else None
+    )
+
+
+def check_internal():
+    curr = get_db()[0]
+    curr.execute(
+        """
+        SELECT 
+            coming.id, exp.id
+        FROM 'transaction' coming
+        JOIN 'transaction' exp ON coming.amount + exp.amount = 0 AND NOT EXISTS (
+            SELECT null from 'transaction' tmp
+            WHERE coming.amount + tmp.amount = 0 
+                AND tmp.date <= coming.date
+                AND tmp.date > exp.date
+        )
+        AND (exp.date BETWEEN DATE(coming.date, '-7 days') AND DATE(coming.date, '7 days'))
+        WHERE coming.amount > 0  AND coming.internal IS NULL AND exp.internal IS NULL
+    """
+    )
+    internals = curr.fetchall()
+    update_list = []
+    for internal in internals:
+        update_list.append((internal[0], internal[1]))
+        update_list.append((internal[1], internal[0]))
+    if update_list:
+        print("Update Internal transactions...")
+        executemany(
+            """
+            UPDATE 'transaction' set internal = ? WHERE id = ?
+        """,
+            update_list,
+        )

@@ -1,5 +1,6 @@
 CREATE TABLE user (
   id INTEGER PRIMARY KEY AUTO_INCREMENT,
   username CHAR(30) UNIQUE NOT NULL,
-  password CHAR(50) NOT NULL
+  password CHAR(50) NOT NULL,
+  refreshed DATETIME
 );

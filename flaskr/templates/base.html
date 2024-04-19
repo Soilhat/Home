@@ -129,6 +129,8 @@
 								aria-labelledby="userDropdown">
 								<a class="dropdown-item" id="refreshData" href="#">Refresh Accounts</a>
 								<div class="dropdown-divider"></div>
+								<a class="dropdown-item" href="{{ url_for('params.finances') }}">Parameters</a>
+								<div class="dropdown-divider"></div>
 								<a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
 									<i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
 									Logout
@@ -217,13 +219,20 @@
 				return false;
 			});
 		});
-	</script>
-	<script>
 		const response = fetch(`/accounts/refresh_date`)
 			.then(response => response.text())
 			.then(text => {
 				document.getElementById(`refreshed_date`).innerHTML = text
 			})
+		function to_currency(number){
+			return Intl.NumberFormat("fr-FR",{
+				style: 'currency',
+				currency: 'EUR',
+			}).format(number)
+		}
+		function to_prct(number){
+			return Intl.NumberFormat("fr-FR",{style: "percent"}).format(number)
+		}
 	</script>
 	{% block javascript %}{% endblock %}
 </body>

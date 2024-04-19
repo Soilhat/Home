@@ -2,7 +2,7 @@ import os
 
 from flask import Flask
 
-from . import auth, finances, system
+from . import auth, finances, params, system
 
 
 def create_app(test_config=None):
@@ -26,6 +26,7 @@ def create_app(test_config=None):
     app.register_blueprint(auth.bp)
     app.register_blueprint(finances.bp)
     app.register_blueprint(system.bp)
+    app.register_blueprint(params.bp)
     app.add_url_rule("/", endpoint="index")
 
     return app

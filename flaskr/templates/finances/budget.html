@@ -23,13 +23,15 @@
                 <div class="card-header py-3">
                     <h3 class="h5 m-0 font-weight-bold text-primary">Revenus</h3>
                 </div>
-                {{render_table(revenus, [{"name" :"Label"}, {"name" :"Date"}, {"name" :"Real"}, {"name" :"Budget"}])}}
+                {{render_table(revenus, [{"name" :"Label"}, {"name" :"Date"}, {"name" :"Real", "suffix":"€"}, {"name"
+                :"Budget", "suffix":"€", "compare":2}])}}
             </div>
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h3 class="h5 m-0 font-weight-bold text-primary">Budget Summary</h3>
                 </div>
-                {{render_table(summary, [{"name" :"Type"}, {"name" :"%"}, {"name" :"Budget"}, {"name" :"Real",
+                {{render_table(summary, [{"name" :"Type"}, {"name" :"%", "suffix":"%"}, {"name" :"Budget",
+                "suffix":"€"}, {"name" :"Real", "suffix":"€",
                 "compare":2}])}}
             </div>
             <div class="card shadow mb-4">
@@ -40,12 +42,13 @@
                 variables,
                 [
                 {"name" :"Label"},
-                {"name" :"Budget"},
-                {"name" :"Real", "compare":1},
+                {"name" :"Budget", "suffix":"€"},
+                {"name" :"Real", "suffix":"€", "compare":1},
                 {
-                "name":"Remaining",
+                "name":"Remaining", "suffix":"€",
                 "type": "custom_css",
-                "callback": format_remaining
+                "callback": format_remaining,
+                "type_except_row":(variables|length)-1
                 },
                 {"name" :"Type"}
                 ]
@@ -55,7 +58,8 @@
                 <div class="card-header py-3">
                     <h3 class="h5 m-0 font-weight-bold text-primary">Fixed</h3>
                 </div>
-                {{render_table(fixed, [{"name" :"Label"}, {"name": "Bank"}, {"name": "Date"}, {"name" :"Budget"}, {"name" :"Real",
+                {{render_table(fixed, [{"name" :"Label"}, {"name": "Bank"}, {"name": "Date"}, {"name" :"Budget",
+                "suffix":"€"}, {"name" :"Real", "suffix":"€",
                 "compare":3}, {"name" :"Type"}])}}
             </div>
         </div>
@@ -72,7 +76,7 @@
                 {"name" :"Label"},
                 {"name" :"Bank"},
                 {"name" :"Date"},
-                {"name" :"Amount"},
+                {"name" :"Amount", "suffix":"€"},
                 {
                 "name" :"Budget",
                 "type": "select",
@@ -84,7 +88,6 @@
                 "name" :"Edit",
                 "type" : "button",
                 "onclick":"'show_trac($id)'",
-                "target":"editTracModal",
                 "index":"id", "type_except_row":(expenses|length)-1
                 }
                 ]
@@ -156,15 +159,15 @@
 
             var element = document.getElementById(`editTrac${trac_id}`)
                 .getElementsByTagName('table')[0]
-                .getElementsByTagName('tr')[table.rows.length -1]
+                .getElementsByTagName('tr')[table.rows.length - 1]
                 .getElementsByTagName('td')[1];
-                
-            element.innerText = tot+'€';
-            if (tot != parseFloat(document.getElementById(`TotalAmount`).innerText.replace('€','').replace(',','.'))){
+
+            element.innerText = tot + '€';
+            if (tot != parseFloat(document.getElementById(`TotalAmount`).innerText.replace('€', '').replace(',', '.'))) {
                 element.style.color = "var(--red)";
                 save_button.disabled = true;
             }
-            else{
+            else {
                 element.style.color = ""
                 save_button.disabled = false;
             }

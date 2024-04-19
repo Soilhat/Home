@@ -1,5 +1,6 @@
-import simplejson as json
 from datetime import datetime
+
+import simplejson as json
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from werkzeug.exceptions import abort
 
@@ -16,9 +17,9 @@ def index():
     curr = get_db()[0]
     curr.execute(
         """
-        SELECT saving.id, saving.name, IFNULL(sum(transaction.amount),0) balance, saving.monthly_saving, saving.goal
+        SELECT saving.id, saving.name, IFNULL(sum('transaction'.amount),0) balance, saving.monthly_saving, saving.goal
         FROM saving
-        LEFT JOIN transaction on transaction.saving_id = saving.id
+        LEFT JOIN 'transaction' on 'transaction'.saving_id = saving.id
         group by saving.id
         """
     )
@@ -44,7 +45,7 @@ def create():
     else:
         curr, conn = get_db()
         curr.execute(
-            "INSERT INTO saving (name, monthly_saving, goal)" " VALUES (%s, %s, %s)",
+            "INSERT INTO saving (name, monthly_saving, goal)" " VALUES (?, ?, ?)",
             (name, monthly_saving, goal),
         )
         conn.commit()
@@ -71,8 +72,8 @@ def create_transaction():
     else:
         curr, conn = get_db()
         curr.execute(
-            "INSERT INTO transaction (id, amount, date, label, saving_id)"
-            " VALUES (FLOOR(1 + RAND() * (10000000000 - 0 + 1)), %s, %s, %s, %s)",
+            "INSERT INTO 'transaction' (id, amount, date, label, saving_id)"
+            " VALUES (FLOOR(1 + random() * (10000000000 - 0 + 1)), ?, ?, ?, ?)",
             (amount, date, label, saving_id),
         )
         conn.commit()
@@ -81,7 +82,7 @@ def create_transaction():
 
 def get_saving(id):
     curr = get_db()[0]
-    curr.execute("SELECT * FROM saving WHERE id = %s", (id,))
+    curr.execute("SELECT * FROM saving WHERE id = ?", (id,))
     saving = curr.fetchone()
 
     if saving is None:
@@ -96,10 +97,10 @@ def retrieve(saving_id):
     curr = get_db()[0]
     curr.execute(
         f"""
-        SELECT transaction.label, bank, date, to_currency(amount)
-        FROM transaction
-        LEFT JOIN saving on transaction.saving_id = saving.id
-        LEFT JOIN account on transaction.account = account.id
+        SELECT 'transaction'.label, bank, strftime('%Y-%m-%d',date), amount
+        FROM 'transaction'
+        LEFT JOIN saving on 'transaction'.saving_id = saving.id
+        LEFT JOIN account on 'transaction'.account = account.id
         WHERE saving.id = {saving_id}
         ORDER BY date desc
         """
@@ -124,8 +125,7 @@ def update(id):
     else:
         curr, conn = get_db()
         curr.execute(
-            "UPDATE saving SET name = %s, monthly_saving = %s, goal = %s"
-            " WHERE id = %s",
+            "UPDATE saving SET name = ?, monthly_saving = ?, goal = ?" " WHERE id = ?",
             (name, monthly_saving, goal, id),
         )
         conn.commit()
@@ -137,6 +137,6 @@ def update(id):
 def delete(id):
     get_saving(id)
     curr, conn = get_db()
-    curr.execute("DELETE FROM saving WHERE id = %s", (id,))
+    curr.execute("DELETE FROM saving WHERE id = ?", (id,))
     conn.commit()
     return redirect(url_for("finances.saving.index"))

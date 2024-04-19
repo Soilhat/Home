@@ -1,9 +1,6 @@
 from flask import Blueprint
 
-from . import accounts
-from . import budget
-from . import dashboard
-from . import savings
+from . import accounts, budget, dashboard, savings
 
 bp = Blueprint("finances", __name__)
 

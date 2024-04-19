@@ -1,31 +1,15 @@
-from flask import Blueprint, request, render_template, flash, redirect, url_for
-from werkzeug.exceptions import abort
 import re
+from datetime import datetime
 from typing import List
-from flaskr.finances.accounts import hash_id
+
+from flask import Blueprint, flash, redirect, render_template, request, url_for
+from werkzeug.exceptions import abort
 
 from flaskr.auth import login_required
 from flaskr.db import get_db
+from flaskr.finances.accounts import hash_id
 
 bp = Blueprint("budget", __name__)
-
-internal_trac = [
-    "MME SOILHAT MOHAMED",
-    "VIREMENT EN VOTRE FAVEUR DE MONTEIRO ARTHUR",
-    "MONTEIRO ARTHUR",
-    "MOHAMED SOILHAT",
-    "MOHAMED SOILHAT.+",
-    "VIE COMMUNE",
-    "VIE COMMUNE.+",
-    "EPARGNE",
-    "FACTURES",
-    "VR.PERMANENT FACTURES",
-    "VIREMENT EMIS WEB Compte joint",
-    "VR.PERMANENT EPARGNE",
-    "VIREMENT EMIS WEB MONTEIRO ARTHUR OU",
-    "VIREMENT EMIS WEB MONTEIRO ARTHUR",
-    "MLE MOHAMED SOILHAT",
-]
 
 
 @bp.route("/budget")
@@ -35,9 +19,13 @@ def index():
     curr = get_db()[0]
     if month is None:
         curr.execute(
-            "SELECT date_format(Date,'%Y-%m') FROM transaction ORDER BY Date DESC LIMIT 1"
+            "SELECT strftime('%Y-%m',Date) as date FROM 'transaction' ORDER BY Date DESC LIMIT 1"
         )
-        month = curr.fetchone()[0]
+        month: tuple = curr.fetchone()
+        if month is None:
+            month = datetime.today().strftime("%Y-%m")
+        else:
+            month = month[0]
     curr.execute("SELECT DISTINCT type FROM budget")
     budget_type = curr.fetchall()
 
@@ -64,7 +52,7 @@ def bud_list():
     curr.execute(
         """
         SELECT * FROM budget
-        WHERE (end IS NULL OR end >= CURDATE()) AND fixed = 0 AND type = "Income"
+        WHERE (end IS NULL OR end >= DATE('now')) AND fixed = 0 AND type = "Income"
         ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
     """
     )
@@ -72,7 +60,7 @@ def bud_list():
     curr.execute(
         """
         SELECT * FROM budget
-        WHERE (end IS NULL OR end >= CURDATE()) AND fixed = 0 AND type <> "Income"
+        WHERE (end IS NULL OR end >= DATE('now')) AND fixed = 0 AND type <> "Income"
         ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
     """
     )
@@ -80,7 +68,7 @@ def bud_list():
     curr.execute(
         """
         SELECT * FROM budget
-        WHERE (end IS NULL OR end >= CURDATE()) AND fixed = 1 AND type <> "Income"
+        WHERE (end IS NULL OR end >= DATE('now')) AND fixed = 1 AND type <> "Income"
         ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
     """
     )
@@ -88,7 +76,7 @@ def bud_list():
     curr.execute(
         """
         SELECT * FROM budget
-        WHERE end <= CURDATE() AND fixed = 0 AND type = "Income"
+        WHERE end <= DATE('now') AND fixed = 0 AND type = "Income"
         ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
     """
     )
@@ -96,7 +84,7 @@ def bud_list():
     curr.execute(
         """
         SELECT * FROM budget
-        WHERE end <= CURDATE() AND fixed = 0 AND type <> "Income"
+        WHERE end <= DATE('now') AND fixed = 0 AND type <> "Income"
         ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
     """
     )
@@ -104,7 +92,7 @@ def bud_list():
     curr.execute(
         """
         SELECT * FROM budget
-        WHERE end <= CURDATE() AND fixed = 1 AND type <> "Income"
+        WHERE end <= DATE('now') AND fixed = 1 AND type <> "Income"
         ORDER BY end IS NULL DESC, end desc, start IS NULL DESC, start desc
     """
     )
@@ -135,35 +123,35 @@ def get_index(row, columns, index):
 def get_budgeted_income(curr, month):
     curr.execute(
         f"""
-        SELECT sum(budget.amount)
+        SELECT sum(budget.amount) as bedget
         FROM budget
         WHERE budget.type = 'Income' 
-            AND ( start IS NULL OR date_format(start,'%Y-%m') < '{month}')
-            AND ( end IS NULL OR date_format(end,'%Y-%m') > '{month}')
+            AND ( start IS NULL OR strftime('%Y-%m',start) < '{month}')
+            AND ( end IS NULL OR strftime('%Y-%m',end) > '{month}')
     """
     )
-    return curr.fetchone()[0]
+    return curr.fetchone()[0] or 0
 
 
 def get_revenus(curr, month):
     revenus = f"""
-        SELECT label, MAX(date) as date, to_currency(sum(amount)) as 'real_amount', MAX(budget) as budget
+        SELECT label, IFNULL(strftime('%Y-%m-%d',MAX(date)),'') as date, sum(amount) as 'real_amount', IFNULL(MAX(budget),0) as budget
         FROM (
-            SELECT trac.label, trac.date, trac.amount, to_currency(budget.amount) as budget, CASE WHEN budget.label IS NULL THEN trac.label else budget.label END as budget_label
-            FROM transaction as trac
+            SELECT trac.label, trac.date, trac.amount, budget.amount as budget, CASE WHEN budget.label IS NULL THEN trac.label else budget.label END as budget_label
+            FROM 'transaction' as trac
             INNER JOIN account as acc on trac.account=acc.id
-            LEFT OUTER JOIN budget on Upper(trac.label) LIKE CONCAT('%',  Upper(budget.label), '%')
-            WHERE acc.type = 'CHECKING' AND trac.amount > 0 AND date_format(Date,'%Y-%m') = '{month}'
+            LEFT OUTER JOIN budget on Upper(trac.label) LIKE '%'||Upper(budget.label)||'%'
+            WHERE acc.type = 'CHECKING' AND trac.amount > 0 AND strftime('%Y-%m',Date) = '{month}'
 		        AND (budget.type = 'Income' OR budget.type IS NULL)
-                AND trac.label NOT REGEXP '^{"$|^".join(internal_trac)}$'
+                AND trac.internal IS NULL
         UNION ALL
-            SELECT DISTINCT budget.label, '' as date, to_currency(0) as 'real', to_currency(budget.amount) as budget, CASE WHEN budget.label IS NULL THEN trac.label else budget.label END as budget_label
+            SELECT DISTINCT budget.label, '' as date, 0 as 'real', budget.amount as budget, CASE WHEN budget.label IS NULL THEN trac.label else budget.label END as budget_label
             FROM budget
-            LEFT JOIN transaction as trac on Upper(trac.label) LIKE CONCAT('%',  Upper(budget.label), '%')
-            WHERE (trac.id IS NULL OR date_format(Date,'%Y-%m') <> '{month}')
+            LEFT JOIN 'transaction' as trac on Upper(trac.label) LIKE '%'||Upper(budget.label)||'%'
+            WHERE (trac.id IS NULL OR strftime('%Y-%m',Date) <> '{month}')
 		        AND (budget.type = 'Income' OR budget.type IS NULL) 
-                AND ( start IS NULL OR date_format(start,'%Y-%m') <= '{month}')
-                AND ( end IS NULL OR (date_format(end,'%Y-%m') >= '{month}'))
+                AND ( start IS NULL OR strftime('%Y-%m',start) <= '{month}')
+                AND ( end IS NULL OR (strftime('%Y-%m',end) >= '{month}'))
         )a
         GROUP BY budget_label
     """
@@ -173,8 +161,8 @@ def get_revenus(curr, month):
     UNION ALL
         select 'Total' label,
             '' date,
-            to_currency(sum(CAST(REPLACE(REPLACE(real_amount,'€',''),',','.') as DECIMAL(9,2)))) as 'real_amount',
-            to_currency(sum(CAST(REPLACE(REPLACE(budget,'€',''),',','.') as DECIMAL(9,2)))) as budget
+            IFNULL(sum(real_amount),0) as 'real_amount',
+            IFNULL(sum(budget),0) as budget
         FROM (
             {revenus}
 	    )s
@@ -185,28 +173,28 @@ def get_revenus(curr, month):
 
 def get_summary(curr, month):
     query = f"""
-        SELECT type, to_prct(abs(sum(budget))*100/{get_budgeted_income(curr, month)}) as '%', to_currency(sum(budget))  as budget, to_currency(abs(sum(real_amount))) as 'real_amount'
+        SELECT type, IFNULL(abs(sum(budget))*100/{get_budgeted_income(curr, month)},0) as '%', sum(budget) as budget, abs(sum(real_amount)) as 'real_amount'
         FROM (
             SELECT type, sum(amount) as 'real_amount', sum(budget)  as budget
             FROM (
                 SELECT IFNULL(budget.type, fixed_bud.type) as type, trac.amount, 0 as budget
-                FROM transaction as trac
+                FROM 'transaction' as trac
                 INNER JOIN account as acc on trac.account=acc.id
-                LEFT OUTER JOIN budget on budget.id = trac.budget_id AND date_format(trac.Date,'%Y-%m') = '{month}'
-                LEFT OUTER JOIN budget as fixed_bud on trac.label LIKE CONCAT('%',fixed_bud.label,'%') AND date_format(trac.Date,'%Y-%m') = '{month}'
-                LEFT OUTER JOIN transaction as child ON child.parent = trac.id
-                WHERE date_format(trac.Date,'%Y-%m') = '{month}'
+                LEFT OUTER JOIN budget on budget.id = trac.budget_id AND strftime('%Y-%m',trac.Date) = '{month}'
+                LEFT OUTER JOIN budget as fixed_bud on trac.label LIKE '%'||fixed_bud.label||'%' AND strftime('%Y-%m',trac.Date) = '{month}'
+                LEFT OUTER JOIN 'transaction' as child ON child.parent = trac.id
+                WHERE strftime('%Y-%m',trac.Date) = '{month}'
                     AND (budget.type <> 'Income' OR budget.type IS NULL)
                     AND trac.amount < 0
-                    AND trac.label NOT REGEXP '^{"$|^".join(internal_trac)}$'
+                    AND trac.internal IS NULL
                     AND trac.saving_id IS NULL
                     AND child.id IS NULL
 		        GROUP BY trac.id
             UNION ALL
                 SELECT budget.type, 0.0 as 'real_amount', budget.amount as budget
                 FROM budget
-                WHERE ( start IS NULL OR (date_format(start,'%Y-%m') <= '{month}'))
-                    AND ( end IS NULL OR (date_format(end,'%Y-%m') >= '{month}'))
+                WHERE ( start IS NULL OR (strftime('%Y-%m',start) <= '{month}'))
+                    AND ( end IS NULL OR (strftime('%Y-%m',end) >= '{month}'))
                     AND (type <> 'Income' OR type IS NULL)
             )labels
             GROUP BY type
@@ -218,9 +206,9 @@ def get_summary(curr, month):
             {query}
         UNION ALL
             select 'Total' type,
-                to_prct(abs(sum(budget))*100/{get_budgeted_income(curr, month)}) as '%',
-                to_currency(sum(CAST(REPLACE(REPLACE(budget,'€',''),',','.') as DECIMAL(9,2)))) as budget,
-                to_currency(abs(sum(CAST(REPLACE(REPLACE(real_amount,'€',''),',','.') as DECIMAL(9,2))))) as 'real_amount'
+                IFNULL(abs(sum(budget))*100/{get_budgeted_income(curr, month)},0) as '%',
+                sum(budget) as budget,
+                sum(real_amount) as 'real_amount'
             FROM (
                 {query}
             )s
@@ -231,24 +219,24 @@ def get_summary(curr, month):
 
 def get_expenses(curr, month):
     query = f"""
-        SELECT TRIM(LEADING '0' FROM trac.id) as id, trac.label, account.bank, trac.date, to_currency(abs(trac.amount)) as amount, 
+        SELECT LTRIM(trac.id,'0') as id, trac.label, account.bank, strftime('%Y-%m-%d',trac.date) as date, abs(trac.amount) as amount, 
             CASE 
-                WHEN trac.saving_id is NOT NULL THEN concat('Saving - ',saving.name)
+                WHEN trac.saving_id is NOT NULL THEN 'Saving - '||saving.name
                 WHEN trac.budget_id is NOT NULL THEN budget.label
                 WHEN child.id IS NOT NULL THEN 'Split'
                 ELSE ''
             END budget,
             '' as edit
-	    FROM transaction as trac
-        LEFT OUTER JOIN budget fix on trac.label LIKE CONCAT('%', fix.label ,'%')
+	    FROM 'transaction' as trac
+        LEFT OUTER JOIN budget fix on trac.label LIKE '%'||fix.label||'%'
         LEFT JOIN budget on trac.budget_id = budget.id
         LEFT JOIN saving on trac.saving_id = saving.id
         LEFT OUTER JOIN account on trac.account = account.id
-        LEFT OUTER JOIN transaction child on child.parent = trac.id
+        LEFT OUTER JOIN 'transaction' child on LTRIM(child.parent,'0') = LTRIM(trac.id,'0')
         WHERE 
             trac.amount < 0
-            AND date_format(trac.Date,'%Y-%m') = '{month}'
-            AND trac.label NOT REGEXP '^{"$|^".join(internal_trac)}$'
+            AND strftime('%Y-%m',trac.Date) = '{month}'
+            AND trac.internal IS NULL
             AND fix.label IS NULL
             AND trac.parent IS NULL
 		GROUP BY trac.id
@@ -258,9 +246,7 @@ def get_expenses(curr, month):
             {query}
         UNION ALL
             select '' as id, 'Total' label, '' as bank, '' as 'date', 
-                to_currency(abs(sum(
-                    CAST(REPLACE(REPLACE(amount,'€',''),',','.') as DECIMAL(9,2))
-                ))) as amount,
+                IFNULL(sum(amount),0) as amount,
                 '' as 'budget', '' as edit
             FROM (
                 {query}
@@ -274,11 +260,15 @@ def get_expenses(curr, month):
 def get_variables(curr, month):
     month = f"{month}-01"
     query = f"""
-        SELECT budget.label, to_currency(budget.amount) as budget, to_currency(abs(sum(trac.amount))) as 'real_amount', 
-            to_currency(budget.amount * (IF(date_format(curdate(),'%Y-%m') = date_format('{month}','%Y-%m'), DAYOFMONTH(curdate())/DAYOFMONTH(LAST_DAY(curdate())), 1)-(IFNULL(abs(sum(trac.amount)/ budget.amount),0))))
+        SELECT budget.label, budget.amount as budget, IFNULL(abs(sum(trac.amount)),0) as 'real_amount', 
+            budget.amount * (
+				CASE WHEN strftime('%Y-%m',Date('now')) = strftime('%Y-%m','{month}')
+					THEN CAST(strftime('%d',DATE('now'))AS FLOAT)/CAST(strftime('%d',DATE(DATE('now'), 'start of month', '+1 month', '-1 day'))AS FLOAT)
+					ELSE 1 END
+				)-(IFNULL(abs(sum(trac.amount)),0))
         remaining_prct, budget.type
         FROM budget
-        LEFT JOIN transaction as trac on budget.id = trac.budget_id AND date_format(Date,'%Y-%m') = date_format('{month}','%Y-%m')
+        LEFT JOIN 'transaction' as trac on budget.id = trac.budget_id AND strftime('%Y-%m',Date) = strftime('%Y-%m','{month}')
         WHERE  ( start IS NULL OR start < '{month}')
             AND ( end IS NULL OR end > '{month}')
             AND budget.fixed = 0
@@ -290,8 +280,8 @@ def get_variables(curr, month):
             {query}
         UNION ALL
             select 'Total' label,
-                to_currency(abs(sum(CAST(REPLACE(REPLACE(budget,'€',''),',','.') as DECIMAL(9,2))))) as budget,
-                to_currency(abs(sum(CAST(REPLACE(REPLACE(real_amount,'€',''),',','.') as DECIMAL(9,2))))) as 'real_amount',
+                IFNULL(sum(budget),0) as budget,
+                IFNULL(sum(real_amount),0) as 'real_amount',
                 '' as remaining_prct,
                 '' as type
             FROM (
@@ -303,12 +293,12 @@ def get_variables(curr, month):
 
 
 def get_fixed(curr, month):
-    """Retrieve Fixed monthly budgeted transactions"""
+    """Retrieve Fixed monthly budgeted 'transaction's"""
     month = f"{month}-01"
     query = f"""
-        SELECT budget.label, IFNULL(GROUP_CONCAT(bank SEPARATOR ','),''), IFNULL(trac.Date,'') as date, to_currency(budget.amount) as budget, to_currency(abs(sum(trac.amount))) as 'real_amount', budget.type
+        SELECT budget.label, IFNULL(GROUP_CONCAT(bank, ','),''), IFNULL(strftime('%Y-%m-%d',trac.Date),'') as date, budget.amount as budget, IFNULL(abs(sum(trac.amount)),0) as 'real_amount', budget.type
         FROM budget
-        LEFT JOIN transaction as trac on trac.label LIKE CONCAT('%', budget.label ,'%') AND date_format(Date,'%Y-%m') = date_format('{month}','%Y-%m')
+        LEFT JOIN 'transaction' as trac on trac.label LIKE '%'||budget.label||'%' AND strftime('%Y-%m',Date) = strftime('%Y-%m','{month}')
         LEFT OUTER JOIN account on account.id = trac.account
         WHERE  ( start IS NULL OR start <= '{month}')
             AND ( end IS NULL OR end >= '{month}')
@@ -324,8 +314,8 @@ def get_fixed(curr, month):
             select 'Total' label,
                 '' as bank,
                 '' as date,
-                to_currency(abs(sum(CAST(REPLACE(REPLACE(budget,'€',''),',','.') as DECIMAL(9,2))))) as budget,
-                to_currency(abs(sum(CAST(REPLACE(REPLACE(real_amount,'€',''),',','.') as DECIMAL(9,2))))) as 'real_amount',
+                IFNULL(sum(budget),0) as budget,
+                IFNULL(sum(real_amount),0) as 'real_amount',
                 '' as type
             FROM (
                 {query}
@@ -338,18 +328,14 @@ def get_fixed(curr, month):
 def get_spendings(curr, month):
     curr.execute(
         f"""
-        (
             SELECT budget.label
             FROM budget
             WHERE budget.type <> 'Income' AND budget.fixed = 0
-                AND ( start IS NULL OR date_format(start,'%Y-%m') <= '{month}')
-                AND ( end IS NULL OR date_format(end,'%Y-%m') >= '{month}')
-        )
+                AND ( start IS NULL OR strftime('%Y-%m',start) <= '{month}')
+                AND ( end IS NULL OR strftime('%Y-%m',end) >= '{month}')
         UNION ALL
-        (
-            SELECT CONCAT("Saving - ",name)
+            SELECT "Saving - "||name
             FROM saving
-        )
     """
     )
     result = ["", "Split"]
@@ -364,7 +350,7 @@ def create():
     budget_type = request.form["type"]
     start = request.form["start"] if request.form["start"] != "" else None
     end = request.form["end"] if request.form["end"] != "" else None
-    fixed = request.form["fixed"] == "on"
+    fixed = ("fixed" in request.form) and (request.form["fixed"] == "on")
     error = None
 
     if not label:
@@ -376,7 +362,7 @@ def create():
         curr, conn = get_db()
         curr.execute(
             "INSERT INTO budget (label, amount, type, start, end, fixed)"
-            " VALUES (%s, %s, %s, %s, %s, %s)",
+            " VALUES (?, ?, ?, ?, ?, ?)",
             (label, amount, budget_type, start, end, fixed),
         )
         conn.commit()
@@ -402,8 +388,8 @@ def update(id):
     else:
         curr, conn = get_db()
         curr.execute(
-            "UPDATE budget SET label = %s, amount = %s, type = %s, start = %s, end = %s, fixed = %s"
-            " WHERE id = %s",
+            "UPDATE budget SET label = ?, amount = ?, type = ?, start = ?, end = ?, fixed = ?"
+            " WHERE id = ?",
             (label, amount, budget_type, start, end, fixed, id),
         )
         conn.commit()
@@ -412,7 +398,7 @@ def update(id):
 
 def get_budget(id):
     curr = get_db()[0]
-    curr.execute("SELECT * FROM budget WHERE id = %s", (id,))
+    curr.execute("SELECT * FROM budget WHERE id = ?", (id,))
     saving = curr.fetchone()
 
     if saving is None:
@@ -421,31 +407,29 @@ def get_budget(id):
     return saving
 
 
-@bp.route("/trac/<int:id>")
+@bp.route("/trac/<string:id>")
 @login_required
 def get_trac(id):
     curr, conn = get_db()
     query = f"""
-        SELECT TRIM(LEADING '0' FROM trac.id) as id, trac.label, abs(trac.amount) as amount, 
+        SELECT LTRIM(trac.id,'0') as id, trac.label, abs(trac.amount) as amount, 
             CASE 
-                WHEN saving_id is NOT NULL THEN concat('Saving - ',saving.name)
+                WHEN saving_id is NOT NULL THEN 'Saving - '||saving.name
                 WHEN budget_id is NOT NULL THEN budget.label
                 ELSE ''
             END budget
-	    FROM transaction as trac
-        LEFT OUTER JOIN budget fix on trac.label LIKE CONCAT('%', fix.label ,'%')
+	    FROM 'transaction' as trac
+        LEFT OUTER JOIN budget fix on trac.label LIKE '%'||fix.label||'%'
         LEFT JOIN budget on trac.budget_id = budget.id
         LEFT JOIN saving on trac.saving_id = saving.id
-        WHERE trac.parent = {id}
+        WHERE LTRIM(trac.parent,'0') = LTRIM('{id}','0')
     """
     curr.execute(
         f"""
             {query}
         UNION ALL
             select '' as id, 'Total' label, 
-                to_currency(abs(sum(
-                    CAST(REPLACE(REPLACE(amount,'€',''),',','.') as DECIMAL(9,2))
-                ))) as amount,
+                abs(sum(amount)) as amount,
                 '' as 'budget'
             FROM (
                 {query}
@@ -455,18 +439,18 @@ def get_trac(id):
     transac = curr.fetchall()
     curr.execute(
         """
-            SELECT trac.id, bank,to_currency(abs(trac.amount)), date, trac.label,
+            SELECT LTRIM(trac.id,'0'), bank,abs(trac.amount), strftime('%Y-%m-%d',date) as date, trac.label,
                 CASE 
-                    WHEN saving_id is NOT NULL THEN concat('Saving - ',saving.name)
+                    WHEN saving_id is NOT NULL THEN 'Saving - '|| saving.name
                     WHEN budget_id is NOT NULL THEN budget.label
                     ELSE NULL
                 END budget,
                 comment
-            FROM transaction trac
+            FROM 'transaction' trac
             LEFT JOIN account ON trac.account = account.id
             LEFT JOIN budget on trac.budget_id = budget.id
             LEFT JOIN saving on trac.saving_id = saving.id
-            WHERE trac.id = %s
+            WHERE LTRIM(trac.id,'0') = ?
         """,
         (id,),
     )
@@ -485,7 +469,7 @@ def get_trac(id):
 def delete(id):
     get_budget(id)
     curr, conn = get_db()
-    curr.execute("DELETE FROM budget WHERE id = %s", (id,))
+    curr.execute("DELETE FROM budget WHERE id = ?", (id,))
     conn.commit()
     return redirect(url_for("finances.budget.index"))
 
@@ -498,16 +482,16 @@ def update_transac_budget(id):
     if budget.startswith("Saving"):
         budget_table = "saving"
         budget_column = "saving_id"
-        compare = "concat('Saving - ',saving.name)"
+        compare = "'Saving - '||saving.name"
     else:
         budget_table = "budget"
         budget_column = "budget_id"
         compare = "budget.label"
 
-    curr.execute(f""" SELECT id FROM {budget_table} WHERE {compare} = %s""", (budget,))
+    curr.execute(f""" SELECT id FROM {budget_table} WHERE {compare} = ?""", (budget,))
     budget_id = curr.fetchone()
     curr.execute(
-        f"""UPDATE transaction SET {budget_column} = %s WHERE id LIKE '%%s'""",
+        f"""UPDATE 'transaction' SET {budget_column} = ? WHERE id LIKE '%'||?""",
         (budget_id[0], id),
     )
     conn.commit()
@@ -522,7 +506,7 @@ def update_transac_comment(id):
     curr, conn = get_db()
     if comment:
         curr.execute(
-            """UPDATE transaction SET comment = %s WHERE id LIKE '%%s'""",
+            """UPDATE 'transaction' SET comment = ? WHERE id LIKE '%'||?""",
             (comment, id),
         )
     if transactions:
@@ -535,7 +519,7 @@ def update_transac_comment(id):
                 tracs.append(element)
             else:
                 tracs[int(trac_ind) - 1].update(element)
-        curr.execute(f"DELETE FROM transaction WHERE parent = {id}")
+        curr.execute(f"DELETE FROM 'transaction' WHERE parent = {id}")
         for trac in tracs:
             budget = trac["Budget"]
             budget_column = "budget_id"
@@ -543,22 +527,24 @@ def update_transac_comment(id):
                 if budget.startswith("Saving"):
                     budget_table = "saving"
                     budget_column = "saving_id"
-                    compare = "concat('Saving - ',saving.name)"
+                    compare = "'Saving - '||saving.name"
                 else:
                     budget_table = "budget"
                     budget_column = "budget_id"
                     compare = "budget.label"
                 curr.execute(
-                    f""" SELECT id FROM {budget_table} WHERE {compare} = %s""",
+                    f""" SELECT id FROM {budget_table} WHERE {compare} = ?""",
                     (budget,),
                 )
                 budget_id = curr.fetchone()[0]
-            curr.execute("SELECT date, account FROM transaction WHERE id=%s", (id,))
+            curr.execute(
+                "SELECT date, account FROM 'transaction' WHERE LTRIM(id,'0') =?", (id,)
+            )
             date, account = curr.fetchone()
             curr.execute(
                 f"""
-                INSERT INTO transaction (id, label, amount, date, account, parent,{budget_column})
-                VALUES (%s, %s, -%s, %s, %s, %s, %s)
+                INSERT INTO 'transaction' (id, label, amount, date, account, parent,{budget_column})
+                VALUES (?, ?, -?, ?, ?, ?, ?)
             """,
                 (
                     hash_id(trac["Label"]) % 12345678
@@ -573,15 +559,12 @@ def update_transac_comment(id):
                 ),
             )
     conn.commit()
-    return index()
+    return redirect(url_for("finances.budget.index"))
 
 
 def format_remaining(row, cell_id):
     if row[cell_id] == "":
         return ""
-    cell = row[cell_id].replace("€", "")
-    cell = cell.replace(" ", "")
-    cell = cell.replace(",", ".")
-    if float(cell) > 0:
+    if float(row[cell_id]) > 0:
         return "color:green"
     return "color:var(--red)"
