@@ -1,8 +1,8 @@
 from flask import Blueprint, redirect, render_template, request, url_for
 
 from flaskr.auth import login_required
+from flaskr.finances.accounts import refresh
 from flaskr.finances.bank import create_banks, delete_bank, get_banks
-from flaskr.finances.accounts  import refresh
 
 bp = Blueprint("params", __name__)
 

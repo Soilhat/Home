@@ -5,7 +5,7 @@ from math import ceil
 
 from flask import Blueprint, render_template, request, session
 from woob.capabilities.bank.base import Account, Loan, Transaction
-from woob.capabilities.base import NotLoadedType, NotAvailableType
+from woob.capabilities.base import NotAvailableType, NotLoadedType
 from woob.core import Woob
 from woob.core.bcall import CallErrors
 from woob.exceptions import BrowserUnavailable
@@ -339,6 +339,7 @@ def refresh():
     conn.commit()
     return "refreshed"
 
+
 @bp.route("/accounts/refresh_date")
 @login_required
 def refresh_date():
@@ -352,7 +353,12 @@ def refresh_date():
 
 
 def conv_float(value):
-    return float(value) if (not isinstance(value, NotLoadedType)) and (not isinstance(value,NotAvailableType)) else None
+    return (
+        float(value)
+        if (not isinstance(value, NotLoadedType))
+        and (not isinstance(value, NotAvailableType))
+        else None
+    )
 
 
 def conv_date(value):

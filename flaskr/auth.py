@@ -66,7 +66,7 @@ def register():
             try:
                 curr.execute(
                     "INSERT INTO user (username, password) VALUES (%s, %s)",
-                    (username, generate_password_hash(password,method='pbkdf2')),
+                    (username, generate_password_hash(password, method="pbkdf2")),
                 )
                 conn.commit()
             except IntegrityError:
@@ -77,6 +77,7 @@ def register():
         flash(error)
 
     return render_template("auth/register.html")
+
 
 @bp.route("/encryption")
 def generateEncryptionKeys():

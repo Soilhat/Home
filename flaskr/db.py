@@ -63,7 +63,7 @@ def query_db(query, args=(), one=False):
     return (rv[0] if rv else None) if one else rv
 
 
-def executemany(query:str, records:list):
+def executemany(query: str, records: list):
     try:
         records = [
             tuple(
