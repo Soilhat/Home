@@ -47,7 +47,7 @@ def index():
     )
     total = curr.fetchone()[0]
     query = f"""
-        SELECT strftime('%Y-%m-%d',Date), bank, Category, Amount, trac.Label, trac.Type
+        SELECT strftime('%Y-%m-%d',Date), bank, Category, Amount, trac.Label, trac.Type, CASE WHEN internal IS NOT NULL THEN 'TRUE' ELSE 'FALSE' END
         FROM 'transaction' trac
         JOIN account ON account.id = trac.account
         WHERE strftime('%Y-%m',Date) = '{month}'
