@@ -182,7 +182,7 @@ def get_summary(curr, month):
                 INNER JOIN account as acc on trac.account=acc.id
                 LEFT OUTER JOIN budget on budget.id = trac.budget_id AND strftime('%Y-%m',trac.Date) = '{month}'
                 LEFT OUTER JOIN budget as fixed_bud on trac.label LIKE '%'||fixed_bud.label||'%' AND strftime('%Y-%m',trac.Date) = '{month}'
-                LEFT OUTER JOIN 'transaction' as child ON child.parent = trac.id
+                LEFT OUTER JOIN 'transaction' as child ON LTRIM(child.parent,'0') = LTRIM(trac.id,'0')
                 WHERE strftime('%Y-%m',trac.Date) = '{month}'
                     AND (budget.type <> 'Income' OR budget.type IS NULL)
                     AND trac.amount < 0

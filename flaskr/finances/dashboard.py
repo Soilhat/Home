@@ -39,21 +39,17 @@ def index():
         f"""
         SELECT sum(budget) + sum(amount) as pending
         FROM (
-            SELECT IFNULL(budget.type, fixed_bud.type) as type, trac.amount, 0 as budget
+            SELECT trac.amount, 0 as budget
             FROM "transaction" as trac
             INNER JOIN account as acc on trac.account=acc.id
-            LEFT OUTER JOIN budget on budget.id = trac.budget_id
-                AND strftime('%Y-%m',Date) = '{month}'
-            LEFT OUTER JOIN budget as fixed_bud on trac.label LIKE '%'||fixed_bud.label||'%'
-                AND strftime('%Y-%m',Date) = '{month}'
-            WHERE strftime('%Y-%m',Date) = '{month}'
-                AND (budget.type <> 'Income' OR budget.type IS NULL)
+            LEFT OUTER JOIN 'transaction' child on LTRIM(child.parent,0) = LTRIM(trac.id,0)
+            WHERE strftime('%Y-%m',trac.Date) = '{month}'
                 AND trac.amount < 0
                 AND trac.internal IS NULL
                 AND trac.saving_id IS NULL
-                AND trac.parent IS NULL
+                AND child.id IS NULL
         UNION ALL
-            SELECT budget.type, 0 as 'real_amount', budget.amount as budget
+            SELECT 0 as 'real_amount', budget.amount as budget
             FROM budget
             WHERE ( start IS NULL OR (strftime('%Y-%m',start) <= '{month}'))
                 AND ( end IS NULL OR (strftime('%Y-%m',end) >= '{month}'))
