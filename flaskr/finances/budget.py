@@ -140,9 +140,8 @@ def get_revenus(curr, month):
             SELECT trac.label, trac.date, trac.amount, budget.amount as budget, CASE WHEN budget.label IS NULL THEN trac.label else budget.label END as budget_label
             FROM 'transaction' as trac
             INNER JOIN account as acc on trac.account=acc.id
-            LEFT OUTER JOIN budget on Upper(trac.label) LIKE '%'||Upper(budget.label)||'%'
+            LEFT OUTER JOIN budget on Upper(trac.label) LIKE '%'||Upper(budget.label)||'%' AND budget.type = 'Income'
             WHERE acc.type = 'CHECKING' AND trac.amount > 0 AND strftime('%Y-%m',Date) = '{month}'
-		        AND (budget.type = 'Income' OR budget.type IS NULL)
                 AND trac.internal IS NULL
         UNION ALL
             SELECT DISTINCT budget.label, '' as date, 0 as 'real', budget.amount as budget, CASE WHEN budget.label IS NULL THEN trac.label else budget.label END as budget_label
