@@ -298,13 +298,14 @@ def get_fixed(curr, month):
     query = f"""
         SELECT budget.label, IFNULL(GROUP_CONCAT(bank, ','),''), IFNULL(strftime('%Y-%m-%d',trac.Date),'') as date, budget.amount as budget, IFNULL(abs(sum(trac.amount)),0) as 'real_amount', budget.type
         FROM budget
-        LEFT JOIN 'transaction' as trac on trac.label LIKE '%'||budget.label||'%' AND strftime('%Y-%m',Date) = strftime('%Y-%m','{month}')
+        LEFT JOIN 'transaction' as trac on trac.label LIKE '%'||budget.label||'%'
+            AND strftime('%Y-%m',Date) = strftime('%Y-%m','{month}')
+            AND trac.amount <= 0
         LEFT OUTER JOIN account on account.id = trac.account
         WHERE  ( start IS NULL OR start <= '{month}')
             AND ( end IS NULL OR end >= '{month}')
             AND budget.fixed = 1
             AND (budget.type <> 'Income' OR budget.type IS NULL)
-            AND (trac.amount <= 0 OR trac.amount IS NULL)
         GROUP BY budget.label, budget.type
     """
     curr.execute(
