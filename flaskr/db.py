@@ -1,19 +1,8 @@
 import os
 import sqlite3
 
-import mysql.connector
-from flask import current_app, g, session
+from flask import g, session
 from woob.capabilities.base import NotAvailableType, NotLoadedType
-
-
-def get_user_db():
-    conn = mysql.connector.connect(
-        host=current_app.config["MYSQL_HOST"],
-        user=current_app.config["MYSQL_USER"],
-        password=current_app.config["MYSQL_PASSWORD"],
-        database=current_app.config["MYSQL_DB"],
-    )
-    return conn
 
 
 def make_dicts(cursor, row):
@@ -24,7 +13,7 @@ def get_db(user_id: int = None, g_stored=True):
     if user_id is None:
         user_id = session["user_id"]
     if (not g_stored) or ("db" not in g):
-        path = f"databases/{user_id}.db"
+        path = f"adapters/sqllite/databases/{user_id}.db"
         exist_path = os.path.isfile(path)
         if not exist_path:
             file = open(path, "w", encoding="utf8")
@@ -33,7 +22,9 @@ def get_db(user_id: int = None, g_stored=True):
         db = conn.cursor()
         # g.db.row_factory = make_dicts
         if not exist_path:
-            with open("databases/create.sql", "r", encoding="utf8") as sql_file:
+            with open(
+                "adapters/sqllite/databases/create.sql", "r", encoding="utf8"
+            ) as sql_file:
                 sql_script = sql_file.read()
             db.executescript(sql_script)
             conn.commit()

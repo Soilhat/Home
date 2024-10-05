@@ -5,12 +5,20 @@ import functools
 from hashlib import sha256
 
 import rsa
-from flask import (Blueprint, flash, g, redirect, render_template, request,
-                   session, url_for)
-from mysql.connector.errors import IntegrityError
+from flask import (
+    Blueprint,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from flaskr.db import get_user_db
+from core.use_cases.exceptions import UserAlreadyExists
+from flaskr.extensions import user_repository
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -53,8 +61,6 @@ def register():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-        conn = get_user_db()
-        curr = conn.cursor()
         error = None
 
         if not username:
@@ -64,13 +70,11 @@ def register():
 
         if error is None:
             try:
-                curr.execute(
-                    "INSERT INTO user (username, password) VALUES (%s, %s)",
-                    (username, generate_password_hash(password, method="pbkdf2")),
+                user_repository.register(
+                    username, generate_password_hash(password, method="pbkdf2")
                 )
-                conn.commit()
-            except IntegrityError:
-                error = f"User {username} is already registered."
+            except UserAlreadyExists:
+                error = str(UserAlreadyExists)
             else:
                 return redirect(url_for("auth.login"))
 
@@ -110,8 +114,6 @@ def login():
     or the validation succeeds, the user's id is stored in a new session
     and redirect to index page."""
     if request.method == "POST":
-        conn = get_user_db()
-        curr = conn.cursor()
         error = None
 
         username = request.form["username"]
@@ -125,22 +127,21 @@ def login():
 
         if password == "":
             error = "No encryption key found"
-            flash(error)
+            flash(error, category="warning")
 
-        curr.execute("SELECT * FROM user WHERE username = %s", (username,))
-        user = curr.fetchone()
+        user = user_repository.find_by_username(username)
 
         if user is None:
             error = "Incorrect username."
-        elif not check_password_hash(user[2], password):
+        elif not check_password_hash(user.password, password):
             error = "Incorrect password."
 
         if error is None:
             session.clear()
-            session["user_id"] = user[0]
+            session["user_id"] = user.id
             return redirect(url_for("index"))
 
-        flash(error)
+        flash(error, category="warning")
 
     return render_template("auth/login.html")
 
@@ -157,10 +158,7 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        conn = get_user_db()
-        curr = conn.cursor()
-        curr.execute("SELECT * FROM user WHERE id = %s", (user_id,))
-        g.user = curr.fetchone()
+        g.user = user_repository.find_by_id(user_id)
 
 
 @bp.route("/logout")

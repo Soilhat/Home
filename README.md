@@ -2,10 +2,6 @@
 
 ## Prerequisites
 
-### MySQL database
-
-Have a MySQL database with objects defined in folder `sql_queries`
-
 ### Python 
 
 Install dependencies (suggest to use virtual environment) `pip install -r requirements.txt`

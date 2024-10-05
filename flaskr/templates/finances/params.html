@@ -2,6 +2,39 @@
 {% from "components/table.html" import render_table with context %}
 
 {% block content %}
+<a class="btn btn-primary" href="{{ url_for('params.download_db' ) }}">Download database</a>
+<button type="button" class="btn btn-secondary" aria-label="LabelLoadBank" data-toggle="modal" data-target="#loadBank">
+    Upload Transactions
+</button>
+<div class="modal fade" id="loadBank" tabindex="-1" role="dialog" aria-labelledby="LabelLoadBank"
+aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="h5 modal-title">Upload Transactions</h3>
+                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <form action="{{ url_for('params.upload_transactions') }}" method="post" enctype="multipart/form-data">
+                <div class="modal-body" id="deleteBankBody">
+                    <select name="bank">
+                        {% for bank in banks %}
+                        <option>{{ bank[2] }} ({{ bank[1] }}:{{ bank[0] }})</option>
+                        {% endfor %}
+                    </select>
+                    <input type="file" name="file"
+                        accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" type="submit">Upload</button>
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <form method="post" action="{{ url_for('params.finances' ) }}">
     <div class="row">
         <div class="col">
@@ -41,21 +74,21 @@
 
 <div class="modal fade" id="editTrac" tabindex="-1" role="dialog" aria-labelledby="LabelEditTrac"
 aria-hidden="true">
-<div class="modal-dialog" role="document">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="h5 modal-title">Delete Bank</h3>
-            <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">×</span>
-            </button>
-        </div>
-        <div class="modal-body" id="deleteBankBody">DELETE BANK</div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-            <a class="btn btn-danger" id="deleteBankAction"  type="button"  data-dismiss="modal" onclick=deleteBank()>DELETE</a>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="h5 modal-title">Delete Bank</h3>
+                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body" id="deleteBankBody">DELETE BANK</div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+                <a class="btn btn-danger" id="deleteBankAction"  type="button"  data-dismiss="modal" onclick=deleteBank()>DELETE</a>
+            </div>
         </div>
     </div>
-</div>
 </div>
 <script>
 

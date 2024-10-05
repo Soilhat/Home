@@ -1,11 +1,12 @@
 from datetime import datetime
 
 import simplejson as json
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from werkzeug.exceptions import abort
 
 from flaskr.auth import login_required
 from flaskr.db import get_db
+from flaskr.extensions import bank_repository
 
 bp = Blueprint("saving", __name__)
 
@@ -13,17 +14,8 @@ bp = Blueprint("saving", __name__)
 @bp.route("/saving")
 @login_required
 def index():
-    json_return = request.args.get("json", False, type=bool)  # format "YYYY-MM"
-    curr = get_db()[0]
-    curr.execute(
-        """
-        SELECT saving.id, saving.name, IFNULL(sum('transaction'.amount),0) balance, saving.monthly_saving, saving.goal
-        FROM saving
-        LEFT JOIN 'transaction' on 'transaction'.saving_id = saving.id
-        group by saving.id
-        """
-    )
-    savings = curr.fetchall()
+    json_return = request.args.get("json", False, type=bool)
+    savings = bank_repository.get_all_savings(session["user_id"])
     if json_return:
         return json.dumps(savings)
     return render_template("finances/saving.html", savings=savings)
@@ -94,19 +86,10 @@ def get_saving(id):
 @bp.route("/saving/<int:saving_id>")
 @login_required
 def retrieve(saving_id):
-    curr = get_db()[0]
-    curr.execute(
-        f"""
-        SELECT 'transaction'.label, bank, strftime('%Y-%m-%d',date), amount
-        FROM 'transaction'
-        LEFT JOIN saving on 'transaction'.saving_id = saving.id
-        LEFT JOIN account on 'transaction'.account = account.id
-        WHERE saving.id = {saving_id}
-        ORDER BY date desc
-        """
+    return render_template(
+        "finances/saving_id.html",
+        saving_data=bank_repository.get_saving_trac(session["user_id"], saving_id),
     )
-    saving_data = curr.fetchall()
-    return render_template("finances/saving_id.html", saving_data=saving_data)
 
 
 @bp.route("/saving/<int:id>", methods=("POST",))
