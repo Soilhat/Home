@@ -104,9 +104,9 @@ class SqlliteBankRepository(BankRepository):
                 SELECT CAST(sum(amount)/3 AS DECIMAL(10,2)) as revenus_avg
                 FROM "transaction"
                 WHERE amount > 0
-                    AND type = 'TYPE_TRANSFER'
                     AND internal IS NULL
                     AND parent IS NULL
+	                AND saving_id IS NULL
                     AND date BETWEEN 
                         DATE((SELECT MAX(date) from "transaction"),'start of month','-3 month')
                         AND DATE((SELECT MAX(date) from "transaction"), 'start of month')
@@ -156,8 +156,8 @@ class SqlliteBankRepository(BankRepository):
             FROM "transaction"
             WHERE saving_id IS NOT NULL
                 AND amount > 0
-                AND date BETWEEN DATE(DATE(DATE((SELECT MAX(date) from "transaction"), 'start of month', '+1 month', '-1 day'), '+1 day'), '-4 month')
-                    AND DATE(DATE(DATE((SELECT MAX(date) from "transaction"), 'start of month', '+1 month', '-1 day'), '+1 day'), '-1 MONTH')
+                AND date BETWEEN DATE((SELECT MAX(date) from "transaction"),'start of month','-3 month')
+                    AND DATE((SELECT MAX(date) from "transaction"),'start of month')
             """,
             one=True,
         )[0]
@@ -185,11 +185,11 @@ class SqlliteBankRepository(BankRepository):
             FROM "transaction" as trac
             LEFT JOIN budget 
                 on {"UPPER(trac.label) LIKE '%'||UPPER(budget.label)||'%'" if fixed else 'budget_id = budget.id'}
-            WHERE budget_id IS NOT NULL
-                AND budget.Type <> 'Income'
+            WHERE {"budget_id IS NOT NULL AND " if not fixed else ""}
+                budget.Type <> 'Income'
                 AND fixed = {fixed}
-                AND date BETWEEN DATE(DATE(DATE((SELECT MAX(date) from "transaction"), 'start of month', '+1 month', '-1 day'), '+1 day'), '-4 month')
-                    AND DATE(DATE(DATE((SELECT MAX(date) from "transaction"), 'start of month', '+1 month', '-1 day'), '+1 day'), '-1 MONTH')
+                AND date BETWEEN DATE((SELECT MAX(date) from "transaction"),'start of month','-3 month')
+                    AND DATE((SELECT MAX(date) from "transaction"),'start of month')
             """,
             one=True,
         )[0]
@@ -264,16 +264,28 @@ class SqlliteBankRepository(BankRepository):
                 AND (budget.type <> 'Income' OR budget.type IS NULL)
             GROUP BY budget.label, budget.type
         """
+        total = ""
+        if not fixed :
+            total = """
+                IFNULL(sum(budget),0) as budget,
+                IFNULL(sum(real_amount),0) as 'real_amount',
+                '' as remaining_prct,
+                '' as type
+            """
+        else :
+            total = """
+                '' as bank,
+                '' as date,
+                IFNULL(sum(budget),0) as budget,
+                IFNULL(sum(real_amount),0) as 'real_amount',
+                '' as type
+            """
         return self.executor.execute(
             f"""
                 {query}
             UNION ALL
                 select 'Total' label,
-                    '' as bank,
-                    {"'' as date," if fixed else ""}
-                    IFNULL(sum(budget),0) as budget,
-                    IFNULL(sum(real_amount),0) as 'real_amount',
-                    '' as type
+                    {total}
                 FROM (
                     {query}
                 )s

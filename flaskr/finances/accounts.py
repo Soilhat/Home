@@ -85,7 +85,7 @@ def refresh():
     for bank in banks:
         woob = Woob()
         print(f"Processing {bank['module_name']}")
-        corebank = CoreBank({"name": bank["name"]})
+        corebank = CoreBank(name = bank["name"])
         try:
             woob.load_backend(
                 bank["module_name"],
@@ -190,7 +190,18 @@ def refresh():
                 print(f"{exc.errors}")
                 print(f"{account.backend} Browser Unavailable")
                 continue
-
+            core_account = CoreAccount(
+                {
+                    "id": conv_woob(value=account.id),
+                    "bank": corebank,
+                    "label": conv_woob(value=account.label),
+                    "type": conv_woob(value=account_type[account.type]),
+                    "balance": conv_woob(type="float", value=account.balance),
+                    "coming": conv_woob(type="float", value=account.coming),
+                    "iban": conv_woob(account.iban),
+                    "number": conv_woob(value=account.number),
+                }
+            )
             if transactions:
                 tr_type = [
                     "TYPE_UNKNOWN",
@@ -223,13 +234,13 @@ def refresh():
                                     if transaction.id == ""
                                     else transaction.id
                                 ),
-                                "account": account.id,
+                                "account": core_account,
                                 "amount": conv_woob(
                                     type="float", value=transaction.amount
                                 ),
-                                "category": transaction.category,
+                                "category": conv_woob(value=transaction.category),
                                 "date": conv_woob(type="date", value=transaction.date),
-                                "label": transaction.label,
+                                "label": conv_woob(value=transaction.label),
                                 "type": tr_type[transaction.type],
                                 "real_date": conv_woob(
                                     type="date", value=transaction.rdate
@@ -259,7 +270,7 @@ def refresh():
                                     if transaction.id == ""
                                     else transaction.id
                                 ),
-                                "account": account.id,
+                                "account": core_account,
                                 "amount": conv_woob(
                                     type="float", value=transaction.amount
                                 ),

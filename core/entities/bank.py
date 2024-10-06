@@ -2,6 +2,22 @@ from __future__ import annotations
 
 import hashlib
 from datetime import datetime
+from typing import Union
+
+
+def convert_str_to_date(value: str, date_format=None) -> Union[str, datetime]:
+    "try convert str to datetime using date formats"
+    if date_format is None:
+        date_format = ["%d-%m-%Y", "%Y-%m-%d %H:%M:%S"]
+    if isinstance(date_format, str):
+        date_format = [date_format]
+    for frmt in date_format:
+        try:
+            value = datetime.strptime(value, frmt)
+            break
+        except ValueError:
+            continue
+    return value
 
 
 class Bank:
@@ -30,10 +46,10 @@ class Account:
     iban: str = None
     number: str = None
 
-    def __init__(self, account: dict, date_format="%d-%m-%Y"):
+    def __init__(self, account: dict, date_format=None):
         for attr, value in account.items():
             if "date" in attr and isinstance(value, str):
-                value = datetime.strptime(value, date_format)
+                value = convert_str_to_date(value, date_format)
             setattr(self, attr, value)
 
 
@@ -58,10 +74,10 @@ class Loan:
     rate: float = None
     total_amount: float = None
 
-    def __init__(self, loan: dict, date_format="%d-%m-%Y"):
+    def __init__(self, loan: dict, date_format=None):
         for attr, value in loan.items():
             if "date" in attr and isinstance(value, str):
-                value = datetime.strptime(value, date_format)
+                value = convert_str_to_date(value, date_format)
             setattr(self, attr, value)
 
 
@@ -90,10 +106,10 @@ class Transaction:
     parent: Transaction = None
     internal: Transaction = None
 
-    def __init__(self, tra: dict, date_format="%d-%m-%Y"):
+    def __init__(self, tra: dict, date_format=None):
         for attr, value in tra.items():
             if "date" in attr and isinstance(value, str):
-                value = datetime.strptime(value, date_format)
+                value = convert_str_to_date(value, date_format)
             setattr(self, attr, value)
         self.id = tra.get(
             "id",
