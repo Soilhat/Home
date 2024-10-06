@@ -580,10 +580,12 @@ class SqlliteBankRepository(BankRepository):
         if budget_name.startswith("Saving"):
             budget_table = "saving"
             budget_column = "saving_id"
+            rvrt_budget_column = "budget_id"
             compare = "'Saving - '||saving.name"
         else:
             budget_table = "budget"
             budget_column = "budget_id"
+            rvrt_budget_column = "saving_id"
             compare = "budget.label"
 
         budget_id = self.executor.execute(
@@ -592,7 +594,7 @@ class SqlliteBankRepository(BankRepository):
             one=True,
         )
         self.executor.execute(
-            f"""UPDATE 'transaction' SET {budget_column} = ? WHERE id LIKE '%'||?""",
+            f"""UPDATE 'transaction' SET {budget_column} = ? , {rvrt_budget_column} = NULL WHERE id LIKE '%'||?""",
             (budget_id[0], trac_id),
             commit=True,
         )
