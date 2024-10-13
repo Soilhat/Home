@@ -70,7 +70,7 @@ def process_ca_excel(df: pd.DataFrame):
         - balance (float): balance at upload date
     """
     upload_date = datetime.strptime(df.iloc[0].index[0].split(" ")[-1], "%d/%m/%Y")
-    balance = float(df.iloc[5].values[2].split(" ")[1].replace(",", "."))
+    balance = float(df.iloc[5].values[2].split(" ")[1].replace(",", ".").replace(" ", ""))
     account_number = df.iloc[3].values[0].split(" ")[-1]
     new_header = df.iloc[8].values.tolist()  # grab the first row for the header
     df = df[9:]  # take the data less the header row
