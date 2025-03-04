@@ -98,6 +98,35 @@ def process_ca_excel(df: pd.DataFrame):
         balance,
     )
 
+def process_bp_csv(df: pd.DataFrame):
+    upload_date = datetime.strptime(df.iloc[0].index[0].split(" ")[-1], "%d/%m/%Y")
+    balance = float(df.iloc[5].values[2].split(" ")[1].replace(",", ".").replace(u"\xa0", ""))
+    account_number = df.iloc[3].values[0].split(" ")[-1]
+    new_header = df.iloc[8].values.tolist()  # grab the first row for the header
+    df = df[9:]  # take the data less the header row
+    df.columns = new_header  # set the header row as the df header
+    df.rename(
+        columns={
+            "Date": "date",
+            "Libellé": "label",
+        },
+        inplace=True,
+    )
+    df["amount"] = df.apply(
+        lambda x: x["Crédit euros"] if x["Crédit euros"] > 0 else 0 - x["Débit euros"],
+        axis=1,
+    )
+    df = df[["date", "label", "amount"]]
+    df[["label", "category", "type"]] = df.apply(
+        lambda x: category_convertion(x["label"]), axis=1, result_type="expand"
+    )
+
+    return (
+        list(map(lambda x: Transaction(x), df.to_dict(orient="records"))),
+        account_number,
+        upload_date,
+        balance,
+    )
 
 def create_banks():
     banks_: dict = request.values.dicts[1].to_dict()

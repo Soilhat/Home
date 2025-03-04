@@ -364,6 +364,8 @@ class SqlliteBankRepository(BankRepository):
                 LEFT OUTER JOIN budget on Upper(trac.label) LIKE '%'||Upper(budget.label)||'%' AND budget.type = 'Income'
                 WHERE acc.type = 'CHECKING' AND trac.amount > 0 AND strftime('%Y-%m',Date) = '{month}'
                     AND trac.internal IS NULL
+                    AND ( start IS NULL OR strftime('%Y-%m',start) <= '{month}')
+                    AND ( end IS NULL OR (strftime('%Y-%m',end) >= '{month}'))
             UNION ALL
                 SELECT DISTINCT budget.label, '' as date, 0 as 'real', budget.amount as budget, CASE WHEN budget.label IS NULL THEN trac.label else budget.label END as budget_label
                 FROM budget
@@ -595,7 +597,7 @@ class SqlliteBankRepository(BankRepository):
         )
         self.executor.execute(
             f"""UPDATE 'transaction' SET {budget_column} = ? , {rvrt_budget_column} = NULL WHERE id LIKE '%'||?""",
-            (budget_id[0], trac_id),
+            (budget_id[0] if budget_id else None, trac_id),
             commit=True,
         )
 

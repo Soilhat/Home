@@ -18,10 +18,8 @@ def create_app(test_config=None):
         app.config.from_mapping(test_config)
 
     # ensure the instance folder exists
-    try:
+    if not os.path.exists(app.instance_path):
         os.makedirs(app.instance_path)
-    except OSError:
-        pass
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(finances.bp)

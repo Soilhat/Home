@@ -17,6 +17,7 @@ from flaskr.finances.bank import (
     get_banks,
     process_bnp_excel,
     process_ca_excel,
+    process_bp_csv,
 )
 
 bp = Blueprint("params", __name__)
@@ -63,12 +64,15 @@ def upload_transactions():
     file = request.files["file"]
 
     # Parse the data as a Pandas DataFrame type
+    if file.content_type == "text/csv":
+        df = pandas.read_csv(file, header=None)
     df = pandas.read_excel(file)
 
     banks_processes = {
         "bnp": process_bnp_excel,
         "hellobank": process_bnp_excel,
         "ca-paris": process_ca_excel,
+        "bp": process_bp_csv,
     }
     # check bank
     bank = request.form["bank"].split("(")[1].split(":")[0]
