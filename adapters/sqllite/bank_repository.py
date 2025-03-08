@@ -15,6 +15,7 @@ class SqlliteBankRepository(BankRepository):
 
     def __init_executor(self, user_id):
         if self.executor is None:
+            print("read db")
             self.executor = ExecuteSqlite(f"{user_id}.db", "create_bank.sql")
 
     def get_balance(self, user_id: int, loans=False):
@@ -102,11 +103,12 @@ class SqlliteBankRepository(BankRepository):
         return self.executor.execute(
             """
                 SELECT CAST(sum(amount)/3 AS DECIMAL(10,2)) as revenus_avg
-                FROM "transaction"
-                WHERE amount > 0
+                FROM "transaction" trac
+                INNER JOIN account as acc on trac.account=acc.id
+                WHERE amount > 0 
+                    AND acc.type = 'CHECKING'
                     AND internal IS NULL
                     AND parent IS NULL
-	                AND saving_id IS NULL
                     AND date BETWEEN 
                         DATE((SELECT MAX(date) from "transaction"),'start of month','-3 month')
                         AND DATE((SELECT MAX(date) from "transaction"), 'start of month')
@@ -362,10 +364,10 @@ class SqlliteBankRepository(BankRepository):
                 FROM 'transaction' as trac
                 INNER JOIN account as acc on trac.account=acc.id
                 LEFT OUTER JOIN budget on Upper(trac.label) LIKE '%'||Upper(budget.label)||'%' AND budget.type = 'Income'
-                WHERE acc.type = 'CHECKING' AND trac.amount > 0 AND strftime('%Y-%m',Date) = '{month}'
-                    AND trac.internal IS NULL
                     AND ( start IS NULL OR strftime('%Y-%m',start) <= '{month}')
                     AND ( end IS NULL OR (strftime('%Y-%m',end) >= '{month}'))
+                WHERE acc.type = 'CHECKING' AND trac.amount > 0 AND strftime('%Y-%m',Date) = '{month}'
+                    AND trac.internal IS NULL
             UNION ALL
                 SELECT DISTINCT budget.label, '' as date, 0 as 'real', budget.amount as budget, CASE WHEN budget.label IS NULL THEN trac.label else budget.label END as budget_label
                 FROM budget
@@ -525,6 +527,23 @@ class SqlliteBankRepository(BankRepository):
 
     def check_internal(self, user_id: int):
         self.__init_executor(user_id)
+        self.executor.execute("""
+            DELETE FROM 'transaction' WHERE id IN (
+            SELECT CASE 
+                WHEN 
+                    csv.internal IS NOT NULL OR csv.budget_id IS NOT NULL OR csv.saving_id IS NOT NULL OR csv.comment IS NOT NULL
+                    OR EXISTS (
+                        SELECT null FROM 'transaction' intern
+                        WHERE intern.parent = csv.id
+                    )
+                    THEN woob.id
+                ELSE csv.id END
+            FROM 'transaction' woob
+            JOIN 'transaction' csv ON woob.amount = csv.amount AND woob.date = csv.date AND woob.account = csv.account
+            WHERE woob.real_date IS NOT NULL AND csv.real_date IS NULL AND csv.parent IS NULL
+            ORDER BY woob.date desc
+        )
+        """)
         internals = self.executor.execute(
             """
             SELECT 
@@ -535,9 +554,15 @@ class SqlliteBankRepository(BankRepository):
                 WHERE coming.amount + tmp.amount = 0 
                     AND tmp.date <= coming.date
                     AND tmp.date > exp.date
+                    AND coming.account IS NOT NULL
+                    AND tmp.account IS NOT NULL
             )
-            AND (exp.date BETWEEN DATE(coming.date, '-7 days') AND DATE(coming.date, '7 days'))
-            WHERE coming.amount > 0  AND coming.internal IS NULL AND exp.internal IS NULL
+                AND (exp.date BETWEEN DATE(coming.date, '-7 days') AND DATE(coming.date, '7 days'))
+            WHERE coming.amount > 0 
+                AND coming.internal IS NULL
+                AND exp.internal IS NULL
+                AND coming.account IS NOT NULL
+                AND exp.account IS NOT NULL
         """
         )
         update_list = []
@@ -634,7 +659,7 @@ class SqlliteBankRepository(BankRepository):
                 account.label,
                 account.type,
                 account.balance,
-                account.coming,
+                None if account.coming is None else float(account.coming),
                 account.iban,
                 account.number,
             )
@@ -659,7 +684,7 @@ class SqlliteBankRepository(BankRepository):
                 loan.insurance_amount,
                 loan.maturity_date,
                 loan.nb_payments_left,
-                loan.next_payment_amount,
+                None if loan.next_payment_amount is None else float(loan.next_payment_amount),
                 loan.next_payment_date,
                 loan.rate,
                 loan.total_amount,

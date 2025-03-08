@@ -8,16 +8,8 @@ from typing import Union
 def convert_str_to_date(value: str, date_format=None) -> Union[str, datetime]:
     "try convert str to datetime using date formats"
     if date_format is None:
-        date_format = ["%d-%m-%Y", "%Y-%m-%d %H:%M:%S"]
-    if isinstance(date_format, str):
-        date_format = [date_format]
-    for frmt in date_format:
-        try:
-            value = datetime.strptime(value, frmt)
-            break
-        except ValueError:
-            continue
-    return value
+        date_format = "%Y-%m-%d %H:%M:%S" if " " in value else "%d-%m-%Y"
+    return datetime.strptime(value, date_format)
 
 
 class Bank:
