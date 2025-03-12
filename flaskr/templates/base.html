@@ -245,6 +245,88 @@
 		function to_prct(number){
 			return Intl.NumberFormat("fr-FR",{style: "percent"}).format(number)
 		}
+
+        function changeMonth() {
+            var input = document.getElementById('monthPicker');
+            var url = new URL(window.location.toString())
+            var search_params = url.searchParams;
+            search_params.set('month', input.value);
+
+            // change the search property of the main url
+            url.search = search_params.toString();
+
+            // the new url string
+            window.location = url.toString()
+        }
+        function show_trac(id) {
+            const response = fetch(`/trac/${id}`)
+                .then(response => response.text())
+                .then(text => {
+                    document.getElementById(`editTrac`).innerHTML = text
+                })
+        }
+        function update_budget(index) {
+            var e = document.getElementById(`Select${index}`);
+            value = e.options[e.selectedIndex].text
+            header = {
+                'Content-type': 'application/json',
+                'Accept': 'application/json'
+            }
+            fetch(`/transac/${index}/budget`, {
+                method: "POST",
+                headers: header,
+                body: JSON.stringify(value)
+            })
+        }
+        function findTotal(trac_id) {
+            let table = document.getElementById(`editTrac${trac_id}`).getElementsByTagName('table')[0];
+            var arr = document.querySelectorAll("[name^=Amount]");
+            var save_button = document.getElementById("Save_button");
+            var tot = 0;
+
+            for (var i = 0; i < arr.length; i++) {
+                if (parseFloat(arr[i].value))
+                    tot += parseFloat(arr[i].value);
+            }
+
+            var element = document.getElementById(`editTrac${trac_id}`)
+                .getElementsByTagName('table')[0]
+                .getElementsByTagName('tr')[table.rows.length - 1]
+                .getElementsByTagName('td')[1];
+
+            element.innerText = tot + '€';
+            if (tot != parseFloat(document.getElementById(`TotalAmount`).innerText.replace('€', '').replace(',', '.'))) {
+                element.style.color = "var(--red)";
+                save_button.disabled = true;
+            }
+            else {
+                element.style.color = ""
+                save_button.disabled = false;
+            }
+        }
+        function addTracRow(trac_id) {
+            // Get the table element in which you want to add row
+            let table = document.getElementById(`editTrac${trac_id}`).getElementsByTagName('table')[0];
+
+            // Create a row using the inserRow() method and
+            // specify the index where you want to add the row
+            let index = table.rows.length - 1
+            let row = table.insertRow(index);
+
+            // Create table cells
+            let label = row.insertCell(0);
+            let amount = row.insertCell(1);
+            let budget = row.insertCell(2);
+
+            // Add data to c1 and c2
+            amount.innerHTML = `<input  class=""form-control form-control-user" oninput="findTotal('${trac_id}')" name="Amount${index}" type="number" step=0.01 required autocomplete="off">`
+            label.innerHTML = `<input  class="form-control form-control-user" name="Label${index}" required autocomplete="off">`
+            budget.innerHTML = `<select  name="Budget${index}">\
+                            {% for opt in spendings %}\
+                              <option {% if ""==opt %} selected="selected" {% endif %}>{{ opt }}</option>\
+                            {% endfor %}\
+                          </select>`
+        }
 	</script>
 	{% block javascript %}{% endblock %}
 </body>

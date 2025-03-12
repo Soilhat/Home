@@ -180,7 +180,9 @@ def get_trac(id):
                     WHEN budget_id is NOT NULL THEN budget.label
                     ELSE NULL
                 END budget,
-                comment
+                comment,
+                internal,
+                trac.amount
             FROM 'transaction' trac
             LEFT JOIN account ON trac.account = account.id
             LEFT JOIN budget on trac.budget_id = budget.id
@@ -190,6 +192,18 @@ def get_trac(id):
         (id,),
     )
     item = curr.fetchone()
+    curr.execute(
+        f"""
+            SELECT LTRIM(trac.id,'0'), trac.label, strftime('%Y-%m-%d',date), bank
+            FROM 'transaction' trac
+            JOIN account ON account.id = trac.account
+            WHERE amount + {item[8]} = 0
+                AND trac.account IS NOT NULL
+                AND (date BETWEEN DATE('{item[3]}', '-7 days') AND DATE('{item[3]}', '7 days'))
+        """
+    )
+    possible_internals = curr.fetchall()
+    possible_internals.append([None, '', '', ])
     return render_template(
         "finances/transaction_id.html",
         item=item,
@@ -198,6 +212,7 @@ def get_trac(id):
             session["user_id"], str(item[3]).split("-")[1]
         ),
         get_index=get_index,
+        possible_internals = possible_internals,
     )
 
 
@@ -224,11 +239,26 @@ def update_transac_budget(id):
 def update_transac_comment(id):
     transactions: dict = request.values.dicts[1].to_dict()
     comment = transactions.pop("comment")
+    internal = transactions.pop("internals")
     curr, conn = get_db()
     if comment:
         curr.execute(
             """UPDATE 'transaction' SET comment = ? WHERE id LIKE '%'||?""",
             (comment, id),
+        )
+    if internal:
+        # Remove all previous link to the 2 transactions
+        curr.execute(
+            """UPDATE 'transaction' SET internal = NULL WHERE internal LIKE '%'||? OR internal LIKE '%'||?""",
+            (id, internal),
+        )
+        curr.execute(
+            """UPDATE 'transaction' SET internal = ? WHERE id LIKE '%'||?""",
+            (internal, id),
+        )
+        curr.execute(
+            """UPDATE 'transaction' SET internal = ? WHERE id LIKE '%'||?""",
+            (id, internal),
         )
     if transactions:
         tracs: List[dict] = []
@@ -280,7 +310,7 @@ def update_transac_comment(id):
                 ),
             )
     conn.commit()
-    return redirect(url_for("finances.budget.index"))
+    return redirect(request.referrer)
 
 
 def format_remaining(row, cell_id):

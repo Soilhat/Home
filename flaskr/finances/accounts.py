@@ -20,6 +20,12 @@ from flaskr.finances.bank import get_banks
 
 bp = Blueprint("accounts", __name__)
 
+def get_index(row, columns, index):
+    return row[
+        columns.index(
+            next(filter(lambda x: x["name"] == columns[index]["index"], columns))
+        )
+    ]
 
 @bp.route("/accounts")
 @login_required
@@ -47,6 +53,7 @@ def index():
         ceil=ceil,
         curr_page=curr_page,
         month=month,
+        get_index=get_index,
     )
 
 

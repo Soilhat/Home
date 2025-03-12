@@ -221,7 +221,7 @@ class SqlliteBankRepository(BankRepository):
 
         return self.executor.execute(
             f"""
-            SELECT strftime('%Y-%m-%d',Date), bank, Category, Amount, trac.Label, trac.Type, CASE WHEN internal IS NOT NULL THEN 'TRUE' ELSE 'FALSE' END
+            SELECT LTRIM(trac.id,'0'), strftime('%Y-%m-%d',Date), bank, Category, Amount, trac.Label, trac.Type, CASE WHEN internal IS NOT NULL THEN 'TRUE' ELSE 'FALSE' END, '' as edit
             FROM 'transaction' trac
             JOIN account ON account.id = trac.account
             WHERE strftime('%Y-%m',Date) = '{month}'
@@ -531,20 +531,20 @@ class SqlliteBankRepository(BankRepository):
         self.__init_executor(user_id)
         self.executor.execute("""
             DELETE FROM 'transaction' WHERE id IN (
-            SELECT CASE 
-                WHEN 
-                    csv.internal IS NOT NULL OR csv.budget_id IS NOT NULL OR csv.saving_id IS NOT NULL OR csv.comment IS NOT NULL
-                    OR EXISTS (
-                        SELECT null FROM 'transaction' intern
-                        WHERE intern.parent = csv.id
-                    )
-                    THEN woob.id
-                ELSE csv.id END
-            FROM 'transaction' woob
-            JOIN 'transaction' csv ON woob.amount = csv.amount AND woob.date = csv.date AND woob.account = csv.account
-            WHERE woob.real_date IS NOT NULL AND csv.real_date IS NULL AND csv.parent IS NULL
-            ORDER BY woob.date desc
-        )
+                SELECT
+                    CASE WHEN 
+                        csv.internal IS NOT NULL OR csv.budget_id IS NOT NULL OR csv.saving_id IS NOT NULL OR csv.comment IS NOT NULL
+                        OR EXISTS (
+                            SELECT null FROM 'transaction' intern
+                            WHERE intern.parent = csv.id
+                        )
+                        THEN woob.id
+                    ELSE csv.id END
+                FROM 'transaction' woob
+                JOIN 'transaction' csv ON woob.amount = csv.amount AND woob.date = csv.date AND woob.account = csv.account
+                WHERE woob.real_date IS NOT NULL AND csv.real_date IS NULL AND csv.parent IS NULL
+                ORDER BY woob.date desc
+            )
         """)
         internals = self.executor.execute(
             """

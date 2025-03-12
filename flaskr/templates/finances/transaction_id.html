@@ -18,6 +18,18 @@
         </div>
 
         <div class="row">
+          <div class="col-auto">
+            <label><b>Internal</b> :</label>
+            <select name="internals" id="SelectInternals" class="form-select">
+              {% for opt in possible_internals %}
+              <option {% if item[7]==opt[0] %} selected="selected" {% endif %} value={{opt[0]}}>({{opt[3]}}){{ opt[1] }}[{{ opt[2]
+                }}]</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
           <div class="col form-group">
             <label><b>Comment</b> :</label>
             <input class="form-control form-control-user" name="comment" autocomplete="off" {%if
