@@ -165,6 +165,9 @@ aria-hidden="true">
           <div class="row no-gutters align-items-center">
             <div class="col-auto">
               <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ "{:0,.2f}".format(saving[2]).replace(","," ") }}€</div>
+              {% if saving[3] %}
+                <div class="h6 mb-0 mr-3 text-gray-700">({{saving[3]}}€ monthly)</div>
+              {% endif %}
             </div>
             {% if saving[4] %}
             <div class="col">

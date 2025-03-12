@@ -190,6 +190,8 @@ class SqlliteBankRepository(BankRepository):
             WHERE {"budget_id IS NOT NULL AND " if not fixed else ""}
                 budget.Type <> 'Income'
                 AND fixed = {fixed}
+				AND trac.amount < 0
+				AND (start IS NULL OR date >= start ) AND ( end IS NULL OR date <= end )
                 AND date BETWEEN DATE((SELECT MAX(date) from "transaction"),'start of month','-3 month')
                     AND DATE((SELECT MAX(date) from "transaction"),'start of month')
             """,
