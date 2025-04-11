@@ -173,6 +173,7 @@ class SqlliteBankRepository(BankRepository):
             FROM budget
             WHERE fixed = {fixed}
                 AND Type <> 'Income'
+                AND (start IS NULL OR start <= DATE('now'))
                 AND (end IS NULL OR end > DATE('now'))
             """,
             one=True,
