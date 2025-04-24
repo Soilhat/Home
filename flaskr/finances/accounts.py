@@ -226,40 +226,44 @@ def refresh():
                     "TYPE_DEFERRED_CARD",
                     "TYPE_INSTANT",
                 ]
-                bank_repository.upload_transactions(
-                    user_id,
-                    [
-                        Trac(
-                            {
-                                "id": (
-                                    hash_id(transaction.label) % 12345678
-                                    + hash_id(
-                                        transaction.date.strftime("%Y-%m-%d %H:%M:%S")
-                                    )
-                                    % 213054
-                                    + hash_id(str(transaction.amount)) % 65430
-                                    if transaction.id == ""
-                                    else transaction.id
-                                ),
-                                "account": core_account,
-                                "amount": conv_woob(
-                                    type="float", value=transaction.amount
-                                ),
-                                "category": conv_woob(value=transaction.category),
-                                "date": conv_woob(type="date", value=transaction.date),
-                                "label": conv_woob(value=transaction.label),
-                                "type": tr_type[transaction.type],
-                                "real_date": conv_woob(
-                                    type="date", value=transaction.rdate
-                                ),
-                                "value_date": conv_woob(
-                                    type="date", value=transaction.vdate
-                                ),
-                            }
-                        )
-                        for transaction in transactions
-                    ],
-                )
+                try:
+                    bank_repository.upload_transactions(
+                        user_id,
+                        [
+                            Trac(
+                                {
+                                    "id": (
+                                        hash_id(transaction.label) % 12345678
+                                        + hash_id(
+                                            transaction.date.strftime("%Y-%m-%d %H:%M:%S")
+                                        )
+                                        % 213054
+                                        + hash_id(str(transaction.amount)) % 65430
+                                        if transaction.id == ""
+                                        else transaction.id
+                                    ),
+                                    "account": core_account,
+                                    "amount": conv_woob(
+                                        type="float", value=transaction.amount
+                                    ),
+                                    "category": conv_woob(value=transaction.category),
+                                    "date": conv_woob(type="date", value=transaction.date),
+                                    "label": conv_woob(value=transaction.label),
+                                    "type": tr_type[transaction.type],
+                                    "real_date": conv_woob(
+                                        type="date", value=transaction.rdate
+                                    ),
+                                    "value_date": conv_woob(
+                                        type="date", value=transaction.vdate
+                                    ),
+                                }
+                            )
+                            for transaction in transactions
+                        ],
+                    )
+                except Exception:
+                    traceback.print_exc()
+                    continue
 
             if coming_transactions:
                 bank_repository.upload_transactions(

@@ -530,6 +530,7 @@ class SqlliteBankRepository(BankRepository):
 
     def check_internal(self, user_id: int):
         self.__init_executor(user_id)
+        self.executor.execute("""UPDATE 'transaction' SET internal = NULL WHERE internal = 'None'""")
         self.executor.execute("""
             DELETE FROM 'transaction' WHERE id IN (
                 SELECT
