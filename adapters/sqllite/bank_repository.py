@@ -366,7 +366,7 @@ class SqlliteBankRepository(BankRepository):
                 SELECT trac.label, trac.date, trac.amount, budget.amount as budget, CASE WHEN budget.label IS NULL THEN trac.label else budget.label END as budget_label
                 FROM 'transaction' as trac
                 INNER JOIN account as acc on trac.account=acc.id
-                LEFT OUTER JOIN budget on Upper(trac.label) LIKE '%'||Upper(budget.label)||'%' AND budget.type = 'Income'
+                LEFT OUTER JOIN budget on (Upper(trac.label) LIKE '%'||Upper(budget.label)||'%' OR Upper(budget.label) LIKE '%'||Upper(trac.label)||'%') AND budget.type = 'Income'
                     AND ( start IS NULL OR strftime('%Y-%m',start) <= '{month}')
                     AND ( end IS NULL OR (strftime('%Y-%m',end) >= '{month}'))
                 WHERE acc.type = 'CHECKING' AND trac.amount > 0 AND strftime('%Y-%m',Date) = '{month}'
@@ -374,7 +374,7 @@ class SqlliteBankRepository(BankRepository):
             UNION ALL
                 SELECT DISTINCT budget.label, '' as date, 0 as 'real', budget.amount as budget, CASE WHEN budget.label IS NULL THEN trac.label else budget.label END as budget_label
                 FROM budget
-                LEFT JOIN 'transaction' as trac on Upper(trac.label) LIKE '%'||Upper(budget.label)||'%'
+                LEFT JOIN 'transaction' as trac on (Upper(trac.label) LIKE '%'||Upper(budget.label)||'%' OR Upper(budget.label) LIKE '%'||Upper(trac.label)||'%')
                 WHERE (trac.id IS NULL OR strftime('%Y-%m',Date) <> '{month}')
                     AND (budget.type = 'Income' OR budget.type IS NULL) 
                     AND ( start IS NULL OR strftime('%Y-%m',start) <= '{month}')
@@ -662,7 +662,7 @@ class SqlliteBankRepository(BankRepository):
                 account.bank.name,
                 account.label,
                 account.type,
-                account.balance,
+                None if account.balance is None else float(account.balance),
                 None if account.coming is None else float(account.coming),
                 account.iban,
                 account.number,
@@ -685,7 +685,7 @@ class SqlliteBankRepository(BankRepository):
             (
                 loan.id,
                 loan.duration,
-                loan.insurance_amount,
+                None if loan.insurance_amount is None else float(loan.insurance_amount),
                 loan.maturity_date,
                 loan.nb_payments_left,
                 None if loan.next_payment_amount is None else float(loan.next_payment_amount),
